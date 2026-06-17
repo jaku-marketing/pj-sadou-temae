@@ -72,6 +72,16 @@
   .khint{ margin-top:10px; font-size:11.5px; color:#8a8076; font-family:"Klee One",cursive; } .khint b{ color:var(--kobai); }
   .konna{ margin-top:8px; font-size:11.5px; color:var(--imayou); border-left:2px solid var(--kobai); padding-left:9px; line-height:1.7; }
   .konna .vf{ color:var(--usuzumi); }
+  .mame{ margin-top:11px; font-size:11.5px; line-height:1.8; color:#5c5349; background:#f4f7f0;
+    border-left:3px solid var(--matcha); border-radius:8px; padding:8px 11px; }
+  .mame .mt{ font-family:"Zen Old Mincho",serif; color:#7c8c62; font-size:12px; display:block; margin-bottom:2px; }
+  .mame .mt::before{ content:"豆知識"; font-size:9.5px; color:#fff; background:var(--matcha);
+    border-radius:999px; padding:1px 7px; margin-right:7px; letter-spacing:.08em; vertical-align:1px; }
+  .hidebtn{ position:absolute; top:7px; right:9px; font-size:11px; color:#b7ada4; cursor:pointer;
+    font-family:"Zen Maru Gothic",sans-serif; background:none; border:none; line-height:1; }
+  .hidebtn:hover{ color:var(--imayou); }
+  body.hideex .card{ display:none; }
+  body.hideex .count{ bottom:96px; }
 
   .film{ position:fixed; left:0; right:0; bottom:0; z-index:6; padding:12px 18px 14px; background:linear-gradient(0deg,#fffffff5,#ffffff00); }
   .film .row{ display:flex; gap:7px; overflow-x:auto; padding-bottom:6px; }
@@ -98,7 +108,10 @@
     <div class="sb">表千家 ・ 風炉 ・ 女点前</div>
     <div class="phasepills" id="pills"></div>
   </div>
-  <div class="tools-top"><div class="ic on" id="snow" title="季節の演出">❀</div></div>
+  <div class="tools-top">
+    <div class="ic on" id="txt" title="解説の表示／非表示（イメージだけで進む）">解</div>
+    <div class="ic on" id="snow" title="季節の演出">❀</div>
+  </div>
 </div>
 
 <div class="stage">
@@ -117,11 +130,13 @@
 <div class="card">
   <div class="ban"><span class="te" id="cte"></span><span class="kz mincho" id="ckz">一</span></div>
   <div class="cbody">
+    <button class="hidebtn" id="hidebtn" title="解説を隠してイメージだけで進む">解説を隠す ✕</button>
     <div class="ctitle" id="ctitle"></div>
     <div class="ctext" id="ctext"></div>
     <div class="chips" id="chips"></div>
     <div class="khint" id="khint" style="display:none"></div>
     <div class="konna" id="konna" style="display:none"></div>
+    <div class="mame" id="mame" style="display:none"></div>
   </div>
 </div>
 
@@ -129,10 +144,12 @@
 <div class="film"><div class="row" id="film"></div></div>
 
 <script src="./data/steps.js"></script>
+<script src="./data/tidbits.js"></script>
 <script>
 const ST=window.SADO_STEPS, ALL=ST.steps, PHASES=ST.phases;
+const TID=window.SADO_TIDBITS||[];
 const labelOf={}; PHASES.forEach(p=>labelOf[p.id]=p.label);
-ALL.forEach(s=> s.phaseLabel=labelOf[s.phase]);
+ALL.forEach((s,i)=>{ s.phaseLabel=labelOf[s.phase]; s.mame=TID.length?TID[i%TID.length]:null; });
 let cur=0, front='A';
 const frame=document.getElementById('frame'), imgA=document.getElementById('imgA'), imgB=document.getElementById('imgB');
 ALL.forEach(s=>{ if(s.img){ const i=new Image(); i.src=s.img; }});
@@ -189,6 +206,9 @@ function go(i){ cur=Math.max(0,Math.min(ALL.length-1,i)); const s=ALL[cur];
   if(ps.length){ ko.style.display='block'; ko.innerHTML=ps.join('<br>')+(s.verify?' <span class="vf">※要確認</span>':''); }
   else if(s.verify){ ko.style.display='block'; ko.innerHTML='<span class="vf">※既存画像との対応は暫定・要確認</span>'; }
   else ko.style.display='none';
+  const mm=document.getElementById('mame');
+  if(s.mame){ mm.style.display='block'; mm.innerHTML='<span class="mt">'+s.mame.title+'</span>'+s.mame.text; }
+  else mm.style.display='none';
 
   document.getElementById('prev').disabled=cur===0;
   document.getElementById('next').disabled=cur===ALL.length-1;
@@ -200,6 +220,15 @@ document.getElementById('prev').onclick=()=>go(cur-1);
 document.getElementById('next').onclick=()=>go(cur+1);
 addEventListener('keydown',e=>{ if(e.key==='ArrowRight') go(cur+1); if(e.key==='ArrowLeft') go(cur-1); });
 document.getElementById('snow').onclick=function(){ this.classList.toggle('on'); if(window.__petals) window.__petals.toggle(this.classList.contains('on')); };
+
+/* 解説の表示／非表示（イメージだけで進みたい人向け） */
+const txtIc=document.getElementById('txt');
+function setExplain(on){ document.body.classList.toggle('hideex',!on); txtIc.classList.toggle('on',on);
+  try{ localStorage.setItem('sado_explain',on?'1':'0'); }catch(e){} }
+txtIc.onclick=()=> setExplain(document.body.classList.contains('hideex'));
+document.getElementById('hidebtn').onclick=()=> setExplain(false);
+try{ if(localStorage.getItem('sado_explain')==='0') setExplain(false); }catch(e){}
+
 go(0);
 </script>
 
