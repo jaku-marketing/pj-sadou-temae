@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>運び点前 — 表千家 風炉 薄茶（女点前）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;600;700&family=Zen+Maru+Gothic:wght@400;500&family=Klee+One:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --kinari:#FBF7F4; --white:#fff; --awa:#F8E7E9;
+    --kobai:#E59AA8; --imayou:#C9788B; --matcha:#9FB089;
+    --sumi:#3A332E; --usuzumi:#94897F; --kin:#C2A14D;
+    --bg1:#FFF6F4; --bg2:#FBE9EC; --accent:#E59AA8;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{ font-family:"Zen Maru Gothic",sans-serif; color:var(--sumi); overflow:hidden; }
+  .mincho{ font-family:"Zen Old Mincho",serif; }
+
+  #bg{ position:fixed; inset:0; z-index:0; transition:background 1.2s ease;
+    background:radial-gradient(120% 100% at 50% -10%, var(--bg1), var(--bg2)); }
+  #petals{ position:fixed; inset:0; z-index:2; pointer-events:none; }
+
+  .top{ position:fixed; top:0; left:0; right:0; z-index:5; display:flex; align-items:flex-start; gap:18px; padding:16px 26px; }
+  .seasons{ display:flex; gap:6px; }
+  .se{ font-family:"Zen Old Mincho",serif; font-size:14px; color:var(--usuzumi); background:#ffffffcc;
+    border:1px solid #00000010; border-radius:999px; width:38px; height:38px; cursor:pointer; transition:.3s; }
+  .se:hover{ color:var(--sumi); }
+  .se.on{ color:#fff; background:var(--accent); border-color:transparent; box-shadow:0 6px 16px #00000018; }
+  .brand{ margin:0 auto; text-align:center; }
+  .brand .nm{ font-family:"Zen Old Mincho",serif; font-size:18px; letter-spacing:.22em; }
+  .brand .sb{ font-size:10.5px; letter-spacing:.2em; color:var(--usuzumi); margin-top:2px; }
+  .phasepills{ display:flex; gap:6px; justify-content:center; margin-top:8px; }
+  .pp{ font-family:"Zen Old Mincho",serif; font-size:11.5px; color:var(--usuzumi); background:#ffffffcc;
+    border:1px solid #00000010; border-radius:999px; padding:4px 12px; cursor:pointer; transition:.25s; }
+  .pp.on{ color:#fff; background:var(--imayou); border-color:transparent; }
+  .tools-top{ display:flex; gap:8px; }
+  .ic{ width:38px; height:38px; border-radius:999px; background:#ffffffcc; border:1px solid #00000010;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--usuzumi); transition:.25s; }
+  .ic:hover{ color:var(--imayou); } .ic.on{ color:#fff; background:var(--kobai); }
+
+  .stage{ position:fixed; inset:0; z-index:3; display:flex; align-items:flex-start; justify-content:center; padding-top:78px; }
+  .frame{ position:relative; width:min(52vw,820px); aspect-ratio:16/9; border-radius:16px; overflow:hidden;
+    background:#fff; border:6px solid #fff; box-shadow:0 24px 60px #3a332e1f, 0 4px 14px #3a332e12; }
+  .frame img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .45s ease; }
+  .frame img.show{ opacity:1; }
+  .frame.need img{ opacity:0 !important; }
+  .needbox{ position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+    background:repeating-linear-gradient(45deg,#fff,#fff 14px,#fdf3f4 14px,#fdf3f4 28px); color:var(--imayou); text-align:center; padding:24px; }
+  .frame.need .needbox{ display:flex; }
+  .needbox .nf{ font-family:"Zen Old Mincho",serif; font-size:15px; letter-spacing:.1em; }
+  .needbox .nt{ font-size:12px; color:var(--usuzumi); }
+  .needbox .nbadge{ font-size:10.5px; letter-spacing:.16em; color:#fff; background:var(--kobai); border-radius:999px; padding:4px 14px; }
+
+  .arrow{ position:fixed; top:50%; transform:translateY(-50%); z-index:6; width:52px; height:52px; border-radius:999px;
+    background:#ffffffdd; border:1px solid #00000010; box-shadow:0 8px 20px #3a332e1a; cursor:pointer;
+    font-family:"Zen Old Mincho",serif; font-size:20px; color:var(--sumi); transition:.25s; }
+  .arrow:hover:not(:disabled){ background:var(--kobai); color:#fff; } .arrow:disabled{ opacity:.25; cursor:default; }
+  #prev{ left:calc(50% - min(26vw,410px) - 60px); } #next{ right:calc(50% - min(26vw,410px) - 60px); }
+
+  .card{ position:fixed; z-index:6; left:50%; transform:translateX(-50%); bottom:104px; width:auto; max-width:min(940px,94vw);
+    display:flex; background:#fffffff2; border:1px solid #fff; border-radius:16px; box-shadow:0 18px 44px #3a332e22; overflow:hidden; }
+  .ban{ writing-mode:vertical-rl; text-orientation:upright; background:var(--awa); color:var(--imayou);
+    font-family:"Zen Old Mincho",serif; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .ban .te{ font-size:11px; letter-spacing:.2em; color:var(--usuzumi); } .ban .kz{ font-size:26px; }
+  .cbody{ padding:16px 18px; } .ctitle{ font-family:"Zen Old Mincho",serif; font-size:18px; margin-bottom:8px; }
+  .ctext{ font-size:13px; line-height:1.95; color:#4a423b; } .ctext b{ color:var(--imayou); font-weight:600; }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:11px; }
+  .chip{ font-size:10.5px; color:#6b6258; background:var(--awa); border-radius:999px; padding:3px 10px; }
+  .khint{ margin-top:10px; font-size:11.5px; color:#8a8076; font-family:"Klee One",cursive; } .khint b{ color:var(--kobai); }
+  .konna{ margin-top:8px; font-size:11.5px; color:var(--imayou); border-left:2px solid var(--kobai); padding-left:9px; line-height:1.7; }
+  .konna .vf{ color:var(--usuzumi); }
+
+  .film{ position:fixed; left:0; right:0; bottom:0; z-index:6; padding:12px 18px 14px; background:linear-gradient(0deg,#fffffff5,#ffffff00); }
+  .film .row{ display:flex; gap:7px; overflow-x:auto; padding-bottom:6px; }
+  .th{ flex:0 0 auto; width:74px; aspect-ratio:16/9; border-radius:7px; overflow:hidden; cursor:pointer;
+    border:2px solid transparent; opacity:.7; transition:.2s; position:relative; background:#f3eae6; }
+  .th img{ width:100%; height:100%; object-fit:cover; } .th.on{ border-color:var(--kobai); opacity:1; transform:translateY(-3px); }
+  .th.needth{ background:repeating-linear-gradient(45deg,#fff,#fff 6px,#fae9eb 6px,#fae9eb 12px); }
+  .th .tn{ position:absolute; left:3px; top:1px; font-family:"Zen Old Mincho",serif; font-size:9px; color:#7a6a62; }
+  .th.has .tn{ color:#fff; text-shadow:0 1px 2px #000; }
+  .count{ position:fixed; right:22px; bottom:96px; z-index:6; font-family:"Zen Old Mincho",serif; font-size:12px;
+    color:var(--usuzumi); background:#ffffffcc; border-radius:999px; padding:4px 12px; }
+
+  @media (max-width:760px){ .stage{ padding-top:70px; } .frame{ width:92vw; } .card{ left:14px; right:14px; transform:none; bottom:108px; max-width:none; width:auto; } #prev,#next{ display:none; } }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<canvas id="petals"></canvas>
+
+<div class="top">
+  <div class="seasons" id="seasons"></div>
+  <div class="brand">
+    <div class="nm mincho">運び点前 ― 薄茶</div>
+    <div class="sb">表千家 ・ 風炉 ・ 女点前</div>
+    <div class="phasepills" id="pills"></div>
+  </div>
+  <div class="tools-top"><div class="ic on" id="snow" title="季節の演出">❀</div></div>
+</div>
+
+<div class="stage">
+  <div class="frame" id="frame">
+    <img id="imgA"><img id="imgB">
+    <div class="needbox">
+      <div class="nbadge">画像 制作予定</div>
+      <div class="nf mincho" id="needf"></div>
+      <div class="nt" id="needt"></div>
+    </div>
+  </div>
+</div>
+<button class="arrow" id="prev">‹</button>
+<button class="arrow" id="next">›</button>
+
+<div class="card">
+  <div class="ban"><span class="te" id="cte"></span><span class="kz mincho" id="ckz">一</span></div>
+  <div class="cbody">
+    <div class="ctitle" id="ctitle"></div>
+    <div class="ctext" id="ctext"></div>
+    <div class="chips" id="chips"></div>
+    <div class="khint" id="khint" style="display:none"></div>
+    <div class="konna" id="konna" style="display:none"></div>
+  </div>
+</div>
+
+<div class="count" id="count"></div>
+<div class="film"><div class="row" id="film"></div></div>
+
+<script src="./data/steps.js"></script>
+<script>
+const ST=window.SADO_STEPS, ALL=ST.steps, PHASES=ST.phases;
+const labelOf={}; PHASES.forEach(p=>labelOf[p.id]=p.label);
+ALL.forEach(s=> s.phaseLabel=labelOf[s.phase]);
+let cur=0, front='A';
+const frame=document.getElementById('frame'), imgA=document.getElementById('imgA'), imgB=document.getElementById('imgB');
+ALL.forEach(s=>{ if(s.img){ const i=new Image(); i.src=s.img; }});
+
+function kanji(n){ if(n===0) return '〇'; const d='〇一二三四五六七八九';
+  if(n<10) return d[n]; if(n<20) return '十'+(n%10?d[n%10]:''); return d[(n/10)|0]+'十'+(n%10?d[n%10]:''); }
+
+/* 季節 */
+const SEASONS={ haru:{k:'春',bg1:'#FFF6F4',bg2:'#FBE9EC',accent:'#E59AA8'},
+  natsu:{k:'夏',bg1:'#F2F8F6',bg2:'#E0EEEA',accent:'#7FA8A0'},
+  aki:{k:'秋',bg1:'#FBF3E6',bg2:'#F3E1C9',accent:'#C77A45'},
+  fuyu:{k:'冬',bg1:'#F6F7F9',bg2:'#E7ECEF',accent:'#8FA0AE'} };
+let season='haru'; const seasonsEl=document.getElementById('seasons');
+Object.keys(SEASONS).forEach(key=>{ const b=document.createElement('button');
+  b.className='se mincho'+(key===season?' on':''); b.dataset.k=key; b.textContent=SEASONS[key].k;
+  b.onclick=()=>setSeason(key); seasonsEl.appendChild(b); });
+function setSeason(key){ season=key; const s=SEASONS[key];
+  document.documentElement.style.setProperty('--bg1',s.bg1); document.documentElement.style.setProperty('--bg2',s.bg2);
+  document.documentElement.style.setProperty('--accent',s.accent);
+  document.querySelectorAll('.se').forEach(b=>b.classList.toggle('on',b.dataset.k===key));
+  if(window.__petals) window.__petals.setSeason(key); }
+
+/* フェーズピル */
+const pills=document.getElementById('pills');
+PHASES.forEach(p=>{ const b=document.createElement('button'); b.className='pp mincho'; b.dataset.id=p.id; b.textContent=p.label;
+  b.onclick=()=>{ const i=ALL.findIndex(s=>s.phase===p.id); if(i>=0) go(i); }; pills.appendChild(b); });
+
+/* フィルムストリップ */
+const film=document.getElementById('film');
+ALL.forEach((s,i)=>{ const t=document.createElement('div'); t.className='th '+(s.img?'has':'needth'); t.dataset.i=i;
+  t.innerHTML=`<span class="tn">${kanji(s.n)}</span>`+(s.img?`<img src="${s.img}" loading="lazy">`:'');
+  t.onclick=()=>go(i); film.appendChild(t); });
+
+function crossfade(src){ const inc=front==='A'?imgB:imgA, out=front==='A'?imgA:imgB;
+  const rev=()=>{ inc.classList.add('show'); out.classList.remove('show'); };
+  inc.onload=rev; inc.src=src; if(inc.complete) rev(); front=front==='A'?'B':'A'; }
+
+function go(i){ cur=Math.max(0,Math.min(ALL.length-1,i)); const s=ALL[cur];
+  document.getElementById('cte').textContent=s.te||'';
+  document.getElementById('ckz').textContent=kanji(s.n);
+  document.getElementById('ctitle').textContent=s.title;
+  document.getElementById('ctext').innerHTML=s.text;
+  if(s.img){ frame.classList.remove('need'); crossfade(s.img); }
+  else{ frame.classList.add('need'); document.getElementById('needf').textContent=s.title;
+    document.getElementById('needt').textContent='この所作の画像を作成予定（'+s.te+'）'; }
+
+  const chips=document.getElementById('chips'); chips.innerHTML='';
+  (s.tools||[]).forEach(t=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=t; chips.appendChild(c); });
+  const kh=document.getElementById('khint');
+  if(s.hint){ kh.style.display='block'; kh.innerHTML='<b>急所</b>　'+s.hint; } else kh.style.display='none';
+  const ko=document.getElementById('konna'); const ps=[];
+  if(s.onna) ps.push('<b>女点前</b>　'+s.onna);
+  if(s.men)  ps.push('<span class="vf">男点前との差：'+s.men+'</span>');
+  if(ps.length){ ko.style.display='block'; ko.innerHTML=ps.join('<br>')+(s.verify?' <span class="vf">※要確認</span>':''); }
+  else if(s.verify){ ko.style.display='block'; ko.innerHTML='<span class="vf">※既存画像との対応は暫定・要確認</span>'; }
+  else ko.style.display='none';
+
+  document.getElementById('prev').disabled=cur===0;
+  document.getElementById('next').disabled=cur===ALL.length-1;
+  document.getElementById('count').textContent=`${cur+1} / ${ALL.length}`;
+  document.querySelectorAll('.pp').forEach(b=>b.classList.toggle('on',b.dataset.id===s.phase));
+  document.querySelectorAll('.th').forEach((el,j)=>{ el.classList.toggle('on',j===cur); if(j===cur) el.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'}); });
+}
+document.getElementById('prev').onclick=()=>go(cur-1);
+document.getElementById('next').onclick=()=>go(cur+1);
+addEventListener('keydown',e=>{ if(e.key==='ArrowRight') go(cur+1); if(e.key==='ArrowLeft') go(cur-1); });
+document.getElementById('snow').onclick=function(){ this.classList.toggle('on'); if(window.__petals) window.__petals.toggle(this.classList.contains('on')); };
+go(0);
+</script>
+
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+<script type="module">
+import * as THREE from 'three';
+const canvas=document.getElementById('petals');
+const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+let W=innerWidth,H=innerHeight;
+const camera=new THREE.OrthographicCamera(-W/2,W/2,H/2,-H/2,-1000,1000);
+const scene=new THREE.Scene();
+function resize(){ W=innerWidth;H=innerHeight; renderer.setSize(W,H);
+  camera.left=-W/2;camera.right=W/2;camera.top=H/2;camera.bottom=-H/2;camera.updateProjectionMatrix(); }
+addEventListener('resize',resize); resize();
+function tex(draw){ const c=document.createElement('canvas'); c.width=c.height=64; const x=c.getContext('2d'); draw(x); return new THREE.CanvasTexture(c); }
+const petalTex=tex(x=>{ x.translate(32,32); x.fillStyle='#fff'; x.beginPath(); x.moveTo(0,-22);
+  x.bezierCurveTo(14,-16,14,10,0,22); x.bezierCurveTo(-14,10,-14,-16,0,-22); x.fill(); });
+const leafTex=tex(x=>{ x.translate(32,32); x.fillStyle='#fff'; for(let i=0;i<5;i++){ x.rotate(Math.PI*2/5);
+  x.beginPath(); x.moveTo(0,0); x.lineTo(-7,-12); x.lineTo(0,-26); x.lineTo(7,-12); x.closePath(); x.fill(); } });
+const dotTex=tex(x=>{ const g=x.createRadialGradient(32,32,0,32,32,30); g.addColorStop(0,'#fff'); g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g; x.beginPath(); x.arc(32,32,30,0,7); x.fill(); });
+const CONF={ haru:{n:240,tex:petalTex,color:0xF2B6C2,size:22,fall:32,sway:34,opa:.95},
+  natsu:{n:120,tex:dotTex,color:0xBFE0D6,size:12,fall:22,sway:18,opa:.6},
+  aki:{n:190,tex:leafTex,color:0xD68A3C,size:20,fall:40,sway:30,opa:.95},
+  fuyu:{n:300,tex:dotTex,color:0xFFFFFF,size:13,fall:26,sway:22,opa:.95} };
+let points=null,data=null,running=true,conf=CONF.haru;
+function build(key){ conf=CONF[key];
+  if(points){ scene.remove(points); points.geometry.dispose(); points.material.dispose(); }
+  const n=conf.n,pos=new Float32Array(n*3); data=[];
+  for(let i=0;i<n;i++){ pos[i*3]=(Math.random()-.5)*W; pos[i*3+1]=(Math.random()-.5)*H; pos[i*3+2]=0;
+    data.push({sp:.5+Math.random(),ph:Math.random()*7,am:.5+Math.random()}); }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const m=new THREE.PointsMaterial({size:conf.size,map:conf.tex,color:conf.color,transparent:true,opacity:conf.opa,depthWrite:false,sizeAttenuation:false});
+  points=new THREE.Points(g,m); scene.add(points); }
+build(season); let t=0;
+function loop(){ requestAnimationFrame(loop); if(!running||!points){ renderer.render(scene,camera); return; }
+  t+=.016; const p=points.geometry.attributes.position.array;
+  for(let i=0;i<data.length;i++){ const d=data[i]; p[i*3+1]-=conf.fall*d.sp*.048;
+    p[i*3]+=Math.sin(t*d.am+d.ph)*conf.sway*.016;
+    if(p[i*3+1]<-H/2-20){ p[i*3+1]=H/2+20; p[i*3]=(Math.random()-.5)*W; } }
+  points.geometry.attributes.position.needsUpdate=true; renderer.render(scene,camera); }
+loop();
+window.__petals={ setSeason:k=>build(k), toggle:on=>{ running=on; canvas.style.opacity=on?1:0; } };
+</script>
+</body>
+</html>
