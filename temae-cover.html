@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<!--
+  茶道お点前 — 表紙（RPG風の導入 → 選択 → はじめる）
+  ====================================================================
+  ・背景＝img/1.png（先生が座敷に座る全身の場面）。先生の顔＝img/2.png を丸ワイプで会話窓に。
+  ・RPGのように先生がタイプライターで語り、「次へ」(クリック/Space/Enter)で進む。
+  ・最後に「選択してください」→ 流派/性別/季節の選択（今回は表千家・女点前・夏のみ有効）→「はじめる」で temae-player.html。
+  ・台詞は茶道の先生の口調（サンプル・要監修）。
+  ====================================================================
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>茶道お点前 — お稽古をはじめる</title>
+<style>
+  :root{
+    --rose:#c98a96; --rose-deep:#9c5d69; --rose-soft:#efe1e4;
+    --surface:#fffdfc; --surface-2:#f6efec; --ink:#2b2421; --ink-soft:#857873; --faint:#aa9c96;
+    --line:rgba(43,36,33,.12);
+    --font:"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+    --font-head:"Hiragino Mincho ProN","Noto Serif JP",serif;
+    --radius:16px; --radius-s:11px;
+    --ease:cubic-bezier(.4,.14,.2,1); --ease-out:cubic-bezier(.16,.84,.34,1);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{ margin:0; font-family:var(--font); color:var(--ink); overflow:hidden; background:#15100f; -webkit-font-smoothing:antialiased; }
+  button{ font-family:inherit; color:inherit; cursor:pointer; }
+  svg{ display:block; }
+
+  .stage{ position:relative; height:100dvh; overflow:hidden; }
+
+  /* 背景シーン（img1） */
+  .scene{ position:absolute; inset:0; }
+  .scene img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:60% 38%; transform:scale(1.04); animation:slowzoom 18s ease-in-out infinite alternate; }
+  @keyframes slowzoom{ from{ transform:scale(1.04);} to{ transform:scale(1.12);} }
+  .scene::after{ content:""; position:absolute; inset:0; background:
+      linear-gradient(0deg, rgba(21,16,15,.82) 0%, rgba(21,16,15,.30) 34%, rgba(21,16,15,.05) 60%, rgba(21,16,15,.25) 100%); }
+  .vignette{ position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 180px rgba(0,0,0,.5); }
+
+  /* タイトル小（左上） */
+  .brandbar{ position:absolute; top:18px; left:20px; z-index:5; display:flex; align-items:center; gap:11px; }
+  .logo{ display:inline-flex; align-items:center; justify-content:center; height:42px; padding:0 15px; border-radius:12px; background:linear-gradient(140deg,var(--rose),var(--rose-deep)); color:#fff; font-family:var(--font-head); font-weight:700; letter-spacing:.18em; font-size:17px; text-indent:.16em; box-shadow:0 8px 18px rgba(0,0,0,.35); }
+  .brandbar .sub{ color:rgba(255,255,255,.85); font-size:12px; letter-spacing:.14em; text-shadow:0 1px 4px rgba(0,0,0,.5); }
+
+  /* RPG会話窓 */
+  .dialog{ position:absolute; left:0; right:0; bottom:0; z-index:6; padding:0 18px 20px; }
+  .dialog-inner{ max-width:880px; margin:0 auto; display:flex; gap:14px; align-items:flex-end; cursor:pointer; }
+  .face{ flex:0 0 auto; width:84px; height:84px; border-radius:50%; overflow:hidden; position:relative; border:3px solid rgba(255,255,255,.9); box-shadow:0 10px 24px rgba(0,0,0,.4); background:var(--rose-soft); animation:rise .6s var(--ease-out) both; }
+  .face img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:52% 20%; }
+  .box{ flex:1 1 auto; min-width:0; background:rgba(255,253,252,.96); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.6); border-radius:18px; box-shadow:0 18px 44px rgba(0,0,0,.4); padding:15px 18px 16px; position:relative; animation:rise .6s var(--ease-out) both; animation-delay:.05s; }
+  .box .nm{ display:inline-block; font-family:var(--font-head); font-size:13px; font-weight:800; color:#fff; background:linear-gradient(140deg,var(--rose),var(--rose-deep)); border-radius:8px; padding:3px 12px; margin-bottom:9px; letter-spacing:.08em; }
+  .box .tx{ font-size:16px; line-height:1.85; letter-spacing:.03em; color:var(--ink); min-height:3.4em; }
+  .box .tx .cursor{ display:inline-block; width:.5em; }
+  .adv{ position:absolute; right:16px; bottom:12px; display:flex; align-items:center; gap:8px; color:var(--rose-deep); font-size:11.5px; font-weight:700; letter-spacing:.06em; opacity:0; transition:opacity .25s; }
+  .adv.show{ opacity:1; }
+  .adv .tri{ width:0; height:0; border:5px solid transparent; border-top-color:var(--rose-deep); margin-top:3px; animation:blink 1s steps(1) infinite; }
+  @keyframes blink{ 50%{ opacity:.2; } }
+  @keyframes rise{ from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:none; } }
+
+  /* 選択パネル（最初は隠す） */
+  .select{ position:absolute; inset:0; z-index:8; display:flex; align-items:center; justify-content:center; padding:22px; opacity:0; pointer-events:none; transition:opacity .4s var(--ease); }
+  .select.show{ opacity:1; pointer-events:auto; }
+  .select::before{ content:""; position:absolute; inset:0; background:rgba(21,16,15,.5); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); }
+  .card{ position:relative; width:min(460px,100%); max-height:calc(100dvh - 40px); overflow-y:auto; background:rgba(255,253,252,.97); border:1px solid rgba(255,255,255,.6); border-radius:24px; box-shadow:0 24px 60px rgba(0,0,0,.45); padding:26px 28px 24px; transform:translateY(14px); transition:transform .45s var(--ease-out); }
+  .select.show .card{ transform:none; }
+  .card .kick{ font-size:11px; letter-spacing:.26em; color:var(--rose-deep); font-weight:800; text-indent:.26em; }
+  .card h1{ font-family:var(--font-head); font-size:24px; font-weight:700; letter-spacing:.05em; margin:6px 0 4px; }
+  .card .lead{ font-size:12.5px; color:var(--ink-soft); margin:0 0 4px; }
+  .groups{ margin:18px 0 6px; display:flex; flex-direction:column; gap:13px; }
+  .grp .lab{ font-size:10.5px; letter-spacing:.16em; color:var(--faint); font-weight:800; margin-bottom:7px; }
+  .seg{ display:flex; gap:8px; }
+  .opt{ position:relative; flex:1 1 0; padding:11px 8px; border:1px solid var(--line); border-radius:var(--radius-s); background:var(--surface-2); color:var(--ink); font-size:13.5px; font-weight:700; letter-spacing:.03em; transition:.2s var(--ease); }
+  .opt:not([disabled]):hover{ border-color:var(--rose); transform:translateY(-1px); }
+  .opt.on{ background:linear-gradient(140deg,var(--rose),var(--rose-deep)); border-color:transparent; color:#fff; box-shadow:0 6px 14px rgba(156,93,105,.28); }
+  .opt[disabled]{ opacity:.5; cursor:not-allowed; }
+  .opt .soon{ display:block; font-size:9px; letter-spacing:.06em; color:var(--faint); font-weight:700; margin-top:3px; }
+  .start{ width:100%; margin-top:18px; padding:16px; border:0; border-radius:99px; background:linear-gradient(140deg,var(--rose),var(--rose-deep)); color:#fff; font-size:16px; font-weight:800; letter-spacing:.12em; box-shadow:0 12px 26px rgba(156,93,105,.4); transition:.22s var(--ease); display:inline-flex; align-items:center; justify-content:center; gap:10px; }
+  .start:hover{ transform:translateY(-2px); box-shadow:0 16px 32px rgba(156,93,105,.48); }
+  .start svg{ width:20px; height:20px; }
+  .note{ font-size:11px; color:var(--ink-soft); text-align:center; margin:11px 2px 0; line-height:1.6; }
+
+  @media (max-width:600px){
+    .dialog-inner{ gap:10px; } .face{ width:64px; height:64px; }
+    .box .tx{ font-size:15px; } .brandbar .sub{ display:none; }
+    .scene img{ object-position:62% 34%; }
+  }
+  @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } .scene img{ transform:none; } }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="scene"><img id="bg" alt="" src="./img/1.png"></div>
+  <div class="vignette"></div>
+
+  <div class="brandbar"><span class="logo" aria-hidden="true">茶の湯</span><span class="sub">お点前のお稽古</span></div>
+
+  <!-- RPG会話窓 -->
+  <div class="dialog">
+    <div class="dialog-inner" id="dialogBox" role="button" tabindex="0" aria-label="次へ">
+      <span class="face"><img id="faceImg" src="./img/2.png" alt="先生"></span>
+      <div class="box">
+        <span class="nm">先生</span>
+        <div class="tx" id="dlgText"></div>
+        <div class="adv" id="adv"><span>次へ</span><span class="tri"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 選択 -->
+  <div class="select" id="select">
+    <div class="card">
+      <div class="kick">お稽古をはじめる</div>
+      <h1>選択してください</h1>
+      <p class="lead">流派・お点前・季節をお選びください。</p>
+      <div class="groups">
+        <div class="grp"><div class="lab">流派</div>
+          <div class="seg" data-group="ryugi">
+            <button class="opt on" data-val="omote" aria-pressed="true">表千家</button>
+            <button class="opt" data-val="ura" disabled>裏千家<span class="soon">準備中</span></button>
+          </div>
+        </div>
+        <div class="grp"><div class="lab">お点前</div>
+          <div class="seg" data-group="gender">
+            <button class="opt on" data-val="onna" aria-pressed="true">女点前</button>
+            <button class="opt" data-val="otoko" disabled>男点前<span class="soon">準備中</span></button>
+          </div>
+        </div>
+        <div class="grp"><div class="lab">季節・設え</div>
+          <div class="seg" data-group="season">
+            <button class="opt on" data-val="furo" aria-pressed="true">夏（風炉）</button>
+            <button class="opt" data-val="ro" disabled>冬（炉）<span class="soon">準備中</span></button>
+          </div>
+        </div>
+      </div>
+      <a class="start" id="startBtn" href="temae-player.html" aria-label="お点前をはじめる">
+        はじめる <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <p class="note">今回は「表千家・女点前・夏（風炉）」をご用意。他は準備中です。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+  const LINES = [
+    "ようこそ、お越しくださいました。",
+    "わたくしが、お点前のお稽古をご案内いたします。",
+    "茶の湯とは、一椀のお茶を心を込めて差し上げること。その所作の積み重ねでございます。",
+    "難しく考えることはありません。一手ずつ、ごいっしょに参りましょう。",
+    "それでは——お稽古の流派と設えを、お選びください。"
+  ];
+  const txtEl = document.getElementById('dlgText');
+  const advEl = document.getElementById('adv');
+  const box   = document.getElementById('dialogBox');
+  const select= document.getElementById('select');
+
+  let li = 0, chars = [], pos = 0, typing = false, timer = null, done = false;
+
+  function typeLine(){
+    chars = Array.from(LINES[li]); pos = 0; typing = true; done = false;
+    advEl.classList.remove('show'); txtEl.textContent = '';
+    clearInterval(timer);
+    timer = setInterval(() => {
+      txtEl.textContent = chars.slice(0, ++pos).join('');
+      if (pos >= chars.length){ clearInterval(timer); typing = false; advEl.classList.add('show'); }
+    }, 34);
+  }
+  function finishLine(){ clearInterval(timer); txtEl.textContent = chars.join(''); typing = false; advEl.classList.add('show'); }
+
+  function advance(){
+    if (done) return;
+    if (typing){ finishLine(); return; }          // 打鍵中なら一気に表示
+    if (li < LINES.length - 1){ li++; typeLine(); } // 次の台詞へ
+    else { done = true; showSelect(); }            // 最後 → 選択へ
+  }
+  function showSelect(){ select.classList.add('show'); }
+
+  box.addEventListener('click', advance);
+  box.addEventListener('keydown', e => { if (e.key==='Enter' || e.key===' '){ e.preventDefault(); advance(); } });
+  document.addEventListener('keydown', e => {
+    if (e.target === box) return;
+    if (!done && (e.key===' ' || e.key==='Enter' || e.key==='ArrowRight')){ e.preventDefault(); advance(); }
+  });
+
+  // 選択（有効な選択肢のみトグル）
+  document.querySelectorAll('.seg').forEach(seg=>{
+    seg.addEventListener('click', e=>{ const b=e.target.closest('.opt'); if(!b||b.disabled) return;
+      seg.querySelectorAll('.opt').forEach(o=>{ o.classList.toggle('on', o===b); o.setAttribute('aria-pressed', String(o===b)); }); });
+  });
+
+  // 顔画像が無ければ枠だけ（壊さない）
+  document.getElementById('faceImg').addEventListener('error', function(){ this.style.display='none'; });
+
+  typeLine();
+})();
+</script>
+</body>
+</html>

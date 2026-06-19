@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<!--
+  茶道お点前 — インターフェース 5パターン比較プロト（見た目は「桜鼠×和柄」で固定／操作の仕組みだけ5通り）
+  ====================================================================
+  ・実データ（./data/steps.js）・実豆知識（./data/tidbits.js）・実画像（./img/3〜53.png）を直読み。
+  ・左上ハンバーガー（☰）＝「インターフェース5切替」＋「全ての手から選ぶ（51手）」。
+  ・解説トグルは1つだけ。豆知識は1箇所のみ・手送りで毎回変わる。画像は角丸。
+  ・UI①右ドロワー / ②ボトムシート / ③没入オーバーレイ / ④ホットスポット / ⑤フリップカード。
+  ====================================================================
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>茶道お点前 — インターフェース5パターン</title>
+<style>
+  /* ===== 固定テーマ：桜鼠 × 和柄 ===== */
+  :root{
+    --rose:#c98a96; --rose-deep:#9c5d69; --rose-soft:#efe1e4;
+    --bg:#f1ece9; --surface:#fffdfc; --surface-2:#f6efec;
+    --ink:#2b2421; --ink-soft:#857873; --faint:#aa9c96;
+    --accent:#7a5d54;
+    --line:rgba(43,36,33,.12); --stage-bg:#ece3df; --chip-bg:#f1e6e6;
+    --font:"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+    --font-head:"Hiragino Mincho ProN","Noto Serif JP",serif;
+    --radius:18px; --radius-s:11px;
+    --shadow:0 18px 44px rgba(80,45,55,.18);
+    --shadow-s:0 6px 16px rgba(80,45,55,.10);
+    --exw:368px;
+    --ease:cubic-bezier(.4,.14,.2,1);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; font-family:var(--font); color:var(--ink); overflow:hidden;
+    background:var(--bg);
+    background-image:
+      repeating-linear-gradient(60deg, rgba(156,93,105,.05) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(-60deg, rgba(156,93,105,.05) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(0deg, rgba(156,93,105,.04) 0 1px, transparent 1px 22px);
+    -webkit-font-smoothing:antialiased;
+  }
+  button{ font-family:inherit; color:inherit; cursor:pointer; }
+  svg{ display:block; }
+  .ico{ width:22px; height:22px; }
+  .app{ height:100dvh; display:grid; grid-template-rows:auto auto 1fr auto; }
+
+  /* ===== TOP BAR ===== */
+  .topbar{ display:flex; align-items:center; gap:13px; padding:11px 16px; background:var(--surface); border-bottom:1px solid var(--line); position:relative; z-index:30; }
+  .ham{ display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border:1px solid var(--line); border-radius:var(--radius-s); background:var(--surface-2); color:var(--ink); transition:.2s var(--ease); flex:0 0 auto; }
+  .ham:hover{ border-color:var(--rose); color:var(--rose-deep); }
+  .brand{ display:flex; align-items:center; gap:11px; min-width:0; flex:1 1 auto; }
+  .logo{ display:inline-flex; align-items:center; justify-content:center; height:38px; padding:0 13px; border-radius:var(--radius-s); background:linear-gradient(140deg,var(--rose),var(--rose-deep)); color:#fff; font-family:var(--font-head); font-weight:700; letter-spacing:.16em; font-size:15px; text-indent:.14em; box-shadow:var(--shadow-s); flex:0 0 auto; }
+  .ctx{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .ctx .a{ font-size:11px; letter-spacing:.14em; color:var(--rose-deep); font-weight:700; }
+  .ctx .b{ font-size:11px; letter-spacing:.05em; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ui-name{ font-size:11px; letter-spacing:.06em; color:var(--ink-soft); border:1px solid var(--line); border-radius:99px; padding:5px 12px; white-space:nowrap; flex:0 0 auto; }
+  .ui-name b{ color:var(--rose-deep); font-weight:800; }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; padding:10px 15px; border:1px solid var(--line); border-radius:99px; background:var(--surface-2); color:var(--ink); font-size:12.5px; font-weight:700; letter-spacing:.05em; transition:.2s var(--ease); flex:0 0 auto; }
+  .toggle:hover{ border-color:var(--rose); color:var(--rose-deep); }
+  .toggle.on{ background:var(--rose); border-color:var(--rose); color:#fff; }
+  .toggle .ico{ width:18px; height:18px; }
+
+  /* ===== PROGRESS（スリム1行） ===== */
+  .progress{ display:flex; align-items:center; gap:13px; padding:9px 16px; background:var(--surface-2); border-bottom:1px solid var(--line); position:relative; z-index:20; }
+  .phases{ display:flex; gap:7px; flex:0 0 auto; }
+  .phase{ border:1px solid var(--line); border-radius:99px; padding:5px 12px; background:transparent; font-size:11.5px; letter-spacing:.05em; color:var(--ink-soft); font-weight:700; white-space:nowrap; transition:.2s var(--ease); }
+  .phase:hover{ border-color:var(--rose); color:var(--rose-deep); }
+  .phase.on{ background:var(--rose); border-color:var(--rose); color:#fff; }
+  .pbar{ flex:1 1 auto; height:6px; border-radius:99px; background:var(--rose-soft); overflow:hidden; min-width:50px; }
+  .pbar i{ display:block; height:100%; width:0; border-radius:99px; background:linear-gradient(90deg,var(--rose),var(--rose-deep)); transition:width .42s var(--ease); }
+  .pcount{ flex:0 0 auto; font-size:12px; color:var(--ink-soft); white-space:nowrap; font-weight:700; }
+  .pcount b{ color:var(--rose-deep); font-size:1.3em; font-family:var(--font-head); }
+
+  /* ===== VIEWPORT（共通の舞台。中身は同じ、modeで見せ方が変わる） ===== */
+  .viewport{ position:relative; min-height:0; overflow:hidden; padding:18px; }
+  .card{ position:absolute; inset:18px; transition:transform .6s var(--ease); transform-style:preserve-3d; }
+  .imgwrap{
+    position:absolute; inset:0; border-radius:var(--radius); overflow:hidden;
+    background:var(--stage-bg); border:1px solid var(--line); box-shadow:var(--shadow);
+    display:flex; align-items:center; justify-content:center;
+    backface-visibility:hidden; transition:right .44s var(--ease), inset .44s var(--ease);
+  }
+  .imgwrap img{ max-width:100%; max-height:100%; object-fit:contain; opacity:0; transition:opacity .4s var(--ease); }
+  .imgwrap img.ready{ opacity:1; }
+  .imgcap{ position:absolute; left:0; right:0; bottom:0; padding:34px 18px 14px; pointer-events:none;
+    background:linear-gradient(0deg, rgba(0,0,0,.46), transparent); color:#fff; display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+  .imgcap .t{ font-family:var(--font-head); font-size:16px; font-weight:700; letter-spacing:.04em; text-shadow:0 1px 6px rgba(0,0,0,.4); }
+  .imgcap .n{ font-size:11.5px; letter-spacing:.1em; opacity:.92; white-space:nowrap; }
+
+  /* 解説（1ノード・全mode共有） */
+  .expl{ background:var(--surface); color:var(--ink); }
+  .expl-scroll{ height:100%; overflow-y:auto; scrollbar-width:thin; }
+  .expl-scroll::-webkit-scrollbar{ width:7px; } .expl-scroll::-webkit-scrollbar-thumb{ background:var(--rose-soft); border-radius:6px; }
+  .expl-inner{ padding:18px 20px 22px; }
+  .handle{ display:none; }
+  .kicker{ display:inline-block; font-size:10.5px; letter-spacing:.14em; font-weight:800; color:#fff; background:var(--rose); border-radius:99px; padding:3px 11px; }
+  .e-te{ font-size:11.5px; letter-spacing:.1em; color:var(--rose-deep); font-weight:700; margin:12px 0 3px; }
+  .e-title{ font-family:var(--font-head); font-size:22px; font-weight:700; letter-spacing:.04em; margin:0 0 12px; line-height:1.35; }
+  .e-text{ font-size:15px; line-height:1.95; letter-spacing:.02em; margin:0 0 14px; }
+  .e-text b{ color:var(--rose-deep); font-weight:700; }
+  .onna{ font-size:12.5px; line-height:1.7; color:var(--ink-soft); background:var(--rose-soft); border-radius:var(--radius-s); padding:9px 12px; margin:0 0 14px; border-left:3px solid var(--rose); }
+  .onna::before{ content:"女点前のポイント"; display:block; font-size:10px; letter-spacing:.1em; color:var(--rose-deep); font-weight:800; margin-bottom:3px; }
+  .tools{ display:flex; flex-wrap:wrap; gap:7px; margin:0 0 16px; }
+  .tool{ font-size:12px; color:var(--ink); background:var(--chip-bg); border-radius:99px; padding:5px 12px; font-weight:600; }
+  .tool::before{ content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--rose); margin-right:7px; vertical-align:1px; }
+  .tip{ border-top:1px solid var(--line); padding-top:14px; }
+  .tip-h{ display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; letter-spacing:.06em; color:var(--rose-deep); margin-bottom:9px; }
+  .tip-h .ico{ width:17px; height:17px; }
+  .tip-card{ background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius-s); padding:12px 13px; }
+  .tip-cat{ display:inline-block; font-size:9.5px; letter-spacing:.1em; font-weight:800; color:var(--rose-deep); background:var(--rose-soft); border-radius:99px; padding:2px 9px; margin-bottom:6px; }
+  .tip-tt{ font-family:var(--font-head); font-size:14px; font-weight:700; margin-bottom:4px; }
+  .tip-tx{ font-size:12.5px; line-height:1.8; color:var(--ink-soft); }
+
+  /* ホットスポットのマーカー */
+  .marker{ display:none; position:absolute; z-index:6; width:30px; height:30px; border-radius:50%; border:0; background:var(--rose); box-shadow:0 0 0 0 rgba(201,138,150,.6); cursor:pointer; }
+  .marker::after{ content:""; position:absolute; inset:9px; border-radius:50%; background:#fff; }
+  @keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(201,138,150,.55);} 70%{ box-shadow:0 0 0 16px rgba(201,138,150,0);} 100%{ box-shadow:0 0 0 0 rgba(201,138,150,0);} }
+
+  /* =========================================================
+     mode 別の「解説の出し方」（見た目は共通、出し方だけ違う）
+     ========================================================= */
+  /* ---- UI① 右ドロワー ---- */
+  body[data-ui="ui1"] .expl{ position:absolute; top:0; right:0; bottom:0; width:var(--exw); border-left:1px solid var(--line); box-shadow:var(--shadow); transform:translateX(112%); transition:transform .44s var(--ease); }
+  body[data-ui="ui1"].open .expl{ transform:none; }
+  body[data-ui="ui1"].open .imgwrap{ right:calc(var(--exw) + 16px); }
+
+  /* ---- UI② ボトムシート ---- */
+  body[data-ui="ui2"] .expl{ position:absolute; left:0; right:0; bottom:0; height:128px; border-radius:22px 22px 0 0; border-top:1px solid var(--line); box-shadow:0 -12px 30px rgba(80,45,55,.16); transition:height .44s var(--ease); }
+  body[data-ui="ui2"].open .expl{ height:66%; }
+  body[data-ui="ui2"] .handle{ display:block; position:absolute; top:9px; left:50%; transform:translateX(-50%); width:46px; height:5px; border-radius:99px; background:var(--line); }
+  body[data-ui="ui2"] .expl-inner{ padding-top:26px; }
+  body[data-ui="ui2"]:not(.open) .onna,
+  body[data-ui="ui2"]:not(.open) .tools,
+  body[data-ui="ui2"]:not(.open) .tip{ display:none; }
+  body[data-ui="ui2"]:not(.open) .e-text{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:0; }
+
+  /* ---- UI③ 没入オーバーレイ ---- */
+  body[data-ui="ui3"] .expl{ position:absolute; left:0; right:0; bottom:0; max-height:52%; background:linear-gradient(0deg, rgba(38,28,26,.9), rgba(38,28,26,.5) 64%, transparent); transition:opacity .4s var(--ease), transform .4s var(--ease); }
+  body[data-ui="ui3"] .expl .expl-inner{ padding-top:42px; }
+  body[data-ui="ui3"] .expl, body[data-ui="ui3"] .e-text, body[data-ui="ui3"] .e-te, body[data-ui="ui3"] .tip-tx{ color:#fff; }
+  body[data-ui="ui3"] .e-title{ color:#fff; }
+  body[data-ui="ui3"] .tip{ border-top-color:rgba(255,255,255,.2); }
+  body[data-ui="ui3"] .tip-card{ background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.18); }
+  body[data-ui="ui3"] .tip-tt{ color:#fff; }
+  body[data-ui="ui3"] .onna{ background:rgba(255,255,255,.12); color:#fff; }
+  body[data-ui="ui3"] .imgcap{ display:none; }
+  body[data-ui="ui3"]:not(.open) .expl{ opacity:0; transform:translateY(24px); pointer-events:none; }
+  body[data-ui="ui3"] .stage-hint{ position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:5; font-size:11px; letter-spacing:.1em; color:#fff; background:rgba(0,0,0,.32); border-radius:99px; padding:5px 13px; pointer-events:none; opacity:.0; transition:.3s; }
+  body[data-ui="ui3"] .imgwrap{ cursor:pointer; }
+
+  /* ---- UI④ ホットスポット・ポップオーバー ---- */
+  body[data-ui="ui4"] .marker{ display:block; left:50%; top:54%; transform:translate(-50%,-50%); animation:pulse 2.2s infinite; }
+  body[data-ui="ui4"] .expl{ position:absolute; left:24px; bottom:24px; width:min(360px,74%); max-height:74%; border-radius:var(--radius); border:1px solid var(--line); box-shadow:var(--shadow); overflow:hidden; transform:translateY(12px) scale(.98); opacity:0; pointer-events:none; transition:.32s var(--ease); }
+  body[data-ui="ui4"].open .expl{ transform:none; opacity:1; pointer-events:auto; }
+  body[data-ui="ui4"].open .marker{ background:var(--rose-deep); animation:none; }
+
+  /* ---- UI⑤ フリップカード ---- */
+  body[data-ui="ui5"] .viewport{ perspective:1800px; }
+  body[data-ui="ui5"].open .card{ transform:rotateY(180deg); }
+  body[data-ui="ui5"] .expl{ position:absolute; inset:0; transform:rotateY(180deg); backface-visibility:hidden; border-radius:var(--radius); border:1px solid var(--line); box-shadow:var(--shadow); overflow:hidden; }
+  body[data-ui="ui5"] .imgwrap{ cursor:pointer; }
+  body[data-ui="ui5"] .flip-hint{ position:absolute; right:14px; top:14px; z-index:5; font-size:11px; letter-spacing:.08em; color:#fff; background:rgba(0,0,0,.34); border-radius:99px; padding:6px 13px; pointer-events:none; }
+
+  /* mode 限定ヒントの出し分け */
+  .stage-hint, .flip-hint{ display:none; }
+  body[data-ui="ui3"] .stage-hint{ display:block; }
+  body[data-ui="ui5"] .flip-hint{ display:block; }
+  body[data-ui="ui5"].open .flip-hint{ opacity:0; }
+
+  /* ===== FOOTER ===== */
+  .footer{ display:flex; align-items:center; gap:12px; padding:11px 16px; background:var(--surface); border-top:1px solid var(--line); position:relative; z-index:20; }
+  .navbtn{ display:inline-flex; align-items:center; gap:9px; padding:12px 20px; border:1px solid var(--line); border-radius:99px; background:var(--surface-2); color:var(--ink); font-size:14px; font-weight:700; letter-spacing:.06em; transition:.2s var(--ease); flex:0 0 auto; }
+  .navbtn:hover:not(:disabled){ border-color:var(--rose); color:var(--rose-deep); transform:translateY(-1px); }
+  .navbtn.next{ background:linear-gradient(140deg,var(--rose),var(--rose-deep)); color:#fff; border-color:transparent; box-shadow:var(--shadow-s); }
+  .navbtn:disabled{ opacity:.32; cursor:not-allowed; }
+  .navbtn .ico{ width:18px; height:18px; }
+  .foot-mid{ flex:1 1 auto; text-align:center; min-width:0; }
+  .foot-mid .t{ font-family:var(--font-head); font-size:15px; font-weight:700; letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .foot-mid .s{ font-size:11px; color:var(--ink-soft); letter-spacing:.06em; }
+
+  /* ===== ハンバーガーメニュー ===== */
+  .scrim{ position:fixed; inset:0; background:rgba(30,20,24,.42); opacity:0; pointer-events:none; transition:.28s var(--ease); z-index:40; }
+  .scrim.show{ opacity:1; pointer-events:auto; }
+  .menu{ position:fixed; top:0; left:0; bottom:0; width:330px; max-width:88vw; z-index:50; background:var(--surface); border-right:1px solid var(--line); box-shadow:var(--shadow); transform:translateX(-104%); transition:transform .32s var(--ease); display:flex; flex-direction:column; }
+  .menu.show{ transform:none; }
+  .menu-h{ padding:16px 16px 6px; }
+  .menu-h h2{ font-family:var(--font-head); font-size:16px; margin:2px 2px 2px; letter-spacing:.06em; }
+  .menu-h p{ font-size:11px; color:var(--ink-soft); margin:0 2px; line-height:1.6; }
+  .menu-scroll{ flex:1 1 auto; overflow-y:auto; padding:8px 12px 16px; scrollbar-width:thin; }
+  .sec{ font-size:10.5px; letter-spacing:.14em; color:var(--faint); font-weight:800; margin:14px 4px 8px; }
+  .ui-opt{ display:flex; align-items:center; gap:11px; width:100%; text-align:left; border:1px solid var(--line); border-radius:var(--radius-s); background:var(--surface-2); padding:11px 12px; margin-bottom:8px; transition:.18s var(--ease); }
+  .ui-opt:hover{ border-color:var(--rose); transform:translateX(2px); }
+  .ui-opt.on{ border-color:var(--rose); box-shadow:0 0 0 2px var(--rose-soft) inset; }
+  .ui-opt .nn{ flex:0 0 auto; width:30px; height:30px; border-radius:8px; background:var(--rose-soft); color:var(--rose-deep); display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; }
+  .ui-opt.on .nn{ background:var(--rose); color:#fff; }
+  .ui-opt .nm{ font-size:13px; font-weight:800; }
+  .ui-opt .ds{ display:block; font-size:10.5px; color:var(--ink-soft); margin-top:2px; font-weight:500; }
+  .nav-phase{ font-size:10.5px; letter-spacing:.1em; color:var(--faint); font-weight:800; margin:12px 2px 5px; }
+  .nav-item{ display:flex; gap:9px; align-items:center; width:100%; text-align:left; background:transparent; border:0; border-radius:var(--radius-s); padding:7px 9px; font-size:12.5px; color:var(--ink-soft); transition:.16s var(--ease); }
+  .nav-item:hover{ background:var(--surface-2); color:var(--ink); }
+  .nav-item .num{ flex:0 0 auto; width:22px; height:22px; border-radius:50%; border:1px solid var(--line); display:inline-flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; }
+  .nav-item.cur{ background:var(--rose-soft); color:var(--rose-deep); font-weight:700; }
+  .nav-item.cur .num{ background:var(--rose); border-color:var(--rose); color:#fff; }
+  .nav-item.done .num{ background:var(--chip-bg); }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width:860px){
+    :root{ --exw:88vw; }
+    body[data-ui="ui1"] .expl{ z-index:36; }
+    body[data-ui="ui1"].open .imgwrap{ right:0; }   /* スマホはドロワーを上に重ねる */
+    .ctx .b{ display:none; }
+    .ui-name{ display:none; }
+    .navbtn{ padding:11px 15px; font-size:13px; }
+    body[data-ui="ui4"] .expl{ left:14px; right:14px; width:auto; bottom:14px; }
+  }
+  @media (max-width:480px){ .viewport{ padding:12px; } .card{ inset:12px; } .phases .phase{ padding:5px 9px; font-size:11px; } }
+  @media (prefers-reduced-motion:reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body data-ui="ui1" class="open">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ham" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></g></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17c0-1.5-1-2.5-2-4-1.4-2-1-5 1-6.6 2-1.6 6-1.6 8 0 2 1.6 2.4 4.6 1 6.6-1 1.5-2 2.5-2 4"/><path d="M9.5 17.5h5M10 20.5h4"/></g></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></g></symbol>
+</svg>
+
+<!-- ハンバーガーメニュー -->
+<div class="scrim" id="scrim"></div>
+<nav class="menu" id="menu" aria-label="メニュー">
+  <div class="menu-h">
+    <h2>メニュー</h2>
+    <p>インターフェース（操作の仕組み）を切替。見た目は「桜鼠×和柄」で固定。</p>
+  </div>
+  <div class="menu-scroll">
+    <div class="sec">インターフェース（5パターン）</div>
+    <button class="ui-opt" data-ui="ui1"><span class="nn">1</span><span><span class="nm">右ドロワー</span><span class="ds">右からスライドで解説。閉じると画像が広がる。</span></span></button>
+    <button class="ui-opt" data-ui="ui2"><span class="nn">2</span><span><span class="nm">ボトムシート</span><span class="ds">下からせり上がり。ハンドルで段階展開。</span></span></button>
+    <button class="ui-opt" data-ui="ui3"><span class="nn">3</span><span><span class="nm">没入オーバーレイ</span><span class="ds">画像全面＋下に解説。画像タップで没入。</span></span></button>
+    <button class="ui-opt" data-ui="ui4"><span class="nn">4</span><span><span class="nm">ホットスポット</span><span class="ds">画像上の光る点をタップ→その場に解説。</span></span></button>
+    <button class="ui-opt" data-ui="ui5"><span class="nn">5</span><span><span class="nm">フリップカード</span><span class="ds">カードを反転。表＝画像／裏＝解説。</span></span></button>
+
+    <div class="sec">全ての手から選ぶ（<span id="menuTotal">51</span>手）</div>
+    <div id="navList"></div>
+  </div>
+</nav>
+
+<!-- ===== APP ===== -->
+<div class="app">
+  <header class="topbar">
+    <button class="ham" id="hamBtn" type="button" aria-label="メニューを開く"><svg class="ico"><use href="#i-ham"/></svg></button>
+    <div class="brand">
+      <span class="logo" aria-hidden="true">茶の湯</span>
+      <div class="ctx"><span class="a" id="ctxA">表千家・女点前</span><span class="b" id="ctxB">風炉（夏）／薄茶／運び点前</span></div>
+    </div>
+    <span class="ui-name" id="uiName">UI <b>①</b> 右ドロワー</span>
+    <button class="toggle on" id="toggleBtn" type="button" aria-label="解説の表示・非表示" aria-pressed="true"><svg class="ico"><use href="#i-doc"/></svg><span id="toggleLabel">解説</span></button>
+  </header>
+
+  <div class="progress">
+    <div class="phases" id="phases"></div>
+    <div class="pbar"><i id="pbarFill"></i></div>
+    <div class="pcount">第 <b id="pcur">1</b> 手 ／ 全 <span id="ptot">51</span> 手</div>
+  </div>
+
+  <div class="viewport" id="viewport">
+    <div class="card" id="card">
+      <div class="imgwrap" id="imgwrap">
+        <img id="stageImg" alt="">
+        <div class="imgcap"><span class="t" id="capT">初座（風炉と釜）</span><span class="n" id="capN">① 清め</span></div>
+        <div class="stage-hint" id="stageHint">画像をタップで没入／解説</div>
+        <div class="flip-hint">タップで解説（裏面）</div>
+      </div>
+
+      <aside class="expl" id="expl" aria-label="解説と豆知識">
+        <div class="expl-scroll">
+          <div class="handle" id="handle" aria-hidden="true"></div>
+          <div class="expl-inner">
+            <span class="kicker" id="ePhase">① 清め</span>
+            <div class="e-te" id="eTe">運び出し</div>
+            <h2 class="e-title" id="eTitle">初座（風炉と釜）</h2>
+            <p class="e-text" id="eText"></p>
+            <p class="onna" id="eOnna" style="display:none"></p>
+            <div class="tools" id="eTools"></div>
+            <div class="tip">
+              <div class="tip-h"><svg class="ico"><use href="#i-bulb"/></svg>豆知識</div>
+              <div class="tip-card" id="tipCard">
+                <span class="tip-cat" id="tipCat">道具</span>
+                <div class="tip-tt" id="tipTt"></div>
+                <div class="tip-tx" id="tipTx"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+    <button class="marker" id="marker" type="button" aria-label="解説を見る"></button>
+  </div>
+
+  <footer class="footer">
+    <button class="navbtn prev" id="prevBtn" type="button" aria-label="前の手へ"><svg class="ico"><use href="#i-left"/></svg>前へ</button>
+    <div class="foot-mid"><div class="t" id="footT">初座（風炉と釜）</div><div class="s" id="footS">① 清め ・ 運び出し</div></div>
+    <button class="navbtn next" id="nextBtn" type="button" aria-label="次の手へ">次へ<svg class="ico"><use href="#i-right"/></svg></button>
+  </footer>
+</div>
+
+<script src="./data/steps.js"></script>
+<script src="./data/tidbits.js"></script>
+<script>
+"use strict";
+(function(){
+  const ST = window.SADO_STEPS || {steps:[],phases:[],meta:{}};
+  const STEPS = ST.steps || [], PHASES = ST.phases || [], META = ST.meta || {};
+  const TID = window.SADO_TIDBITS || [];
+  const TOTAL = STEPS.length;
+  const UINAMES = { ui1:'① 右ドロワー', ui2:'② ボトムシート', ui3:'③ 没入オーバーレイ', ui4:'④ ホットスポット', ui5:'⑤ フリップカード' };
+  const DEFAULT_OPEN = { ui1:true, ui2:false, ui3:true, ui4:false, ui5:false };
+
+  let cur = 0, uiMode = 'ui1', open = true;
+  const $ = id => document.getElementById(id);
+  const bodyEl = document.body;
+
+  if (META.ryugi) $('ctxA').textContent = META.ryugi + '・' + (META.gender||'');
+  if (META.kisetsu) $('ctxB').textContent = [META.kisetsu, META.cha, META.style].filter(Boolean).join('／');
+  $('ptot').textContent = TOTAL; $('menuTotal').textContent = TOTAL;
+
+  const phaseById = {}; PHASES.forEach(p => phaseById[p.id] = p);
+  const firstIdx = pid => STEPS.findIndex(s => s.phase === pid);
+
+  // フェーズチップ
+  const phasesWrap = $('phases');
+  PHASES.forEach(p => {
+    const b = document.createElement('button'); b.className='phase'; b.type='button'; b.dataset.pid=p.id;
+    b.textContent = p.label; b.title = p.sub||'';
+    b.addEventListener('click', () => { const i=firstIdx(p.id); if(i>=0) goTo(i); });
+    phasesWrap.appendChild(b);
+  });
+
+  // 全手ナビ（メニュー内）
+  const navList = $('navList');
+  PHASES.forEach(p => {
+    const h=document.createElement('div'); h.className='nav-phase'; h.textContent=p.label+'　'+(p.sub||''); navList.appendChild(h);
+    STEPS.forEach((s,i) => { if(s.phase!==p.id) return;
+      const b=document.createElement('button'); b.className='nav-item'; b.type='button'; b.dataset.idx=i;
+      b.innerHTML='<span class="num">'+s.n+'</span><span>'+s.title+'</span>';
+      b.addEventListener('click', () => { goTo(i); openMenu(false); });
+      navList.appendChild(b);
+    });
+  });
+
+  // 豆知識：手送りごとに必ず変わる（関連を優先しつつ cur でずらす）
+  const TKEYS = ['帛紗','茶杓','茶筅','茶碗','棗','建水','柄杓','蓋置','水指','風炉','釜','茶巾'];
+  function pickTip(){
+    const s = STEPS[cur]; const keys = new Set();
+    (s.tools||[]).forEach(t => TKEYS.forEach(k => { if(t.indexOf(k)>=0) keys.add(k); }));
+    let pool = TID.filter(td => [...keys].some(k => ((td.title||'')+(td.text||'')).indexOf(k)>=0));
+    if (!pool.length) pool = TID;
+    return pool.length ? pool[cur % pool.length] : null;
+  }
+
+  // 画像プリロード＋フェード
+  const imgEl = $('stageImg');
+  function setImage(src, alt){
+    imgEl.classList.remove('ready');
+    const pre = new Image();
+    const apply = () => { imgEl.src = src; imgEl.alt = alt||''; requestAnimationFrame(()=>imgEl.classList.add('ready')); };
+    pre.onload = apply; pre.onerror = apply; pre.src = src;
+  }
+
+  function render(){
+    const s = STEPS[cur]; if(!s) return;
+    const p = phaseById[s.phase] || {label:''};
+    setImage(s.img, s.title);
+    $('capT').textContent = s.title; $('capN').textContent = p.label;
+    $('ePhase').textContent = p.label; $('eTe').textContent = s.te||''; $('eTitle').textContent = s.title;
+    $('eText').innerHTML = s.text||'';
+    const onna = $('eOnna'); if(s.onna){ onna.style.display=''; onna.textContent=s.onna; } else onna.style.display='none';
+    const tools=$('eTools'); tools.innerHTML=''; (s.tools||[]).forEach(t=>{ const c=document.createElement('span'); c.className='tool'; c.textContent=t; tools.appendChild(c); });
+    const td = pickTip();
+    if (td){ $('tipCat').textContent = td.category||'豆知識'; $('tipTt').textContent = td.title||''; $('tipTx').textContent = td.text||''; }
+    $('footT').textContent = s.title; $('footS').textContent = p.label + (s.te ? ' ・ ' + s.te : '');
+
+    $('pcur').textContent = s.n;
+    $('pbarFill').style.width = (TOTAL ? ((cur+1)/TOTAL*100) : 0) + '%';
+    Array.from(phasesWrap.children).forEach(b => b.classList.toggle('on', b.dataset.pid===s.phase));
+    Array.from(navList.querySelectorAll('.nav-item')).forEach(b => { const i=+b.dataset.idx; b.classList.toggle('cur', i===cur); b.classList.toggle('done', i<cur); });
+    $('prevBtn').disabled = cur===0; $('nextBtn').disabled = cur===TOTAL-1;
+    const sc = $('expl').querySelector('.expl-scroll'); if(sc) sc.scrollTop = 0;
+  }
+
+  function goTo(i){ i=Math.max(0,Math.min(TOTAL-1,i)); cur=i; render(); }
+  function next(){ if(cur<TOTAL-1) goTo(cur+1); }
+  function prev(){ if(cur>0) goTo(cur-1); }
+
+  // 解説トグル（1つだけ）
+  function setOpen(o){
+    open = o; bodyEl.classList.toggle('open', o);
+    const t=$('toggleBtn'); t.classList.toggle('on', o); t.setAttribute('aria-pressed', String(o));
+    $('toggleLabel').textContent = (uiMode==='ui3') ? (o?'解説':'没入') : '解説';
+  }
+  $('toggleBtn').addEventListener('click', () => setOpen(!open));
+  $('marker').addEventListener('click', () => setOpen(!open));
+  $('handle').addEventListener('click', () => setOpen(!open));
+  $('imgwrap').addEventListener('click', (e) => {
+    if (e.target.closest('.marker')) return;
+    if (uiMode==='ui3' || uiMode==='ui5') setOpen(!open);
+  });
+
+  // インターフェース切替
+  function setUI(mode){
+    uiMode = mode; bodyEl.dataset.ui = mode;
+    $('uiName').innerHTML = 'UI <b>'+UINAMES[mode].charAt(0)+'</b> '+UINAMES[mode].slice(2);
+    document.querySelectorAll('.ui-opt').forEach(b => b.classList.toggle('on', b.dataset.ui===mode));
+    setOpen(window.innerWidth<=860 && mode==='ui1' ? false : DEFAULT_OPEN[mode]);
+  }
+  document.querySelectorAll('.ui-opt').forEach(b => b.addEventListener('click', () => { setUI(b.dataset.ui); openMenu(false); }));
+
+  // メニュー
+  const menu=$('menu'), scrim=$('scrim');
+  function openMenu(o){ menu.classList.toggle('show',o); scrim.classList.toggle('show',o); }
+  $('hamBtn').addEventListener('click', () => openMenu(true));
+  scrim.addEventListener('click', () => openMenu(false));
+
+  document.addEventListener('keydown', e => {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if (e.key==='ArrowRight'){ e.preventDefault(); next(); }
+    else if (e.key==='ArrowLeft'){ e.preventDefault(); prev(); }
+    else if (e.key==='Escape'){ openMenu(false); }
+  });
+  $('prevBtn').addEventListener('click', prev);
+  $('nextBtn').addEventListener('click', next);
+
+  // INIT
+  setUI('ui1'); render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<!--
+  茶道お点前プレイヤー（右ドロワー・確定版／ブラッシュアップ4）
+  ====================================================================
+  ・実データ ./data/steps.js・実豆知識 ./data/tidbits.js・実画像 ./img/3〜53.png。
+  ・修正/追加：
+    ① 解説OFF時の画像はみ出し → フレームを画像比(1600:912)にJSでフィット（余白ゼロ・開閉どちらでも）
+    ② 先生コメント(吹き出し)を撤去 → 「稽古の心得」に先生の顔写真(img/2.png)を追加
+    ③ 概要文を表千家・風炉でブラッシュアップ（PROCEDURE.md準拠・要監修。手順詳細の細部は社中/教本で差あり）
+    ④ 道具ピクトグラムを追加（各道具チップにアイコン）
+  ====================================================================
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>茶道お点前 — お稽古プレイヤー（表千家・女性・夏）</title>
+<style>
+  :root{
+    --rose:#c98a96; --rose-deep:#9c5d69; --rose-soft:#efe1e4;
+    --bg:#f1ece9; --surface:#fffdfc; --surface-2:#f6efec;
+    --ink:#2b2421; --ink-soft:#857873; --faint:#aa9c96; --accent:#7a5d54;
+    --line:rgba(43,36,33,.12); --stage-bg:#e7ddd8; --chip-bg:#f1e6e6;
+    --font:"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+    --font-head:"Hiragino Mincho ProN","Noto Serif JP",serif;
+    --radius:18px; --radius-s:11px;
+    --shadow:0 18px 44px rgba(80,45,55,.18); --shadow-s:0 6px 16px rgba(80,45,55,.10);
+    --dw:380px; --ease:cubic-bezier(.4,.14,.2,1); --ease-out:cubic-bezier(.16,.84,.34,1);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{ margin:0; font-family:var(--font); color:var(--ink); overflow:hidden; background:var(--bg);
+    background-image:
+      repeating-linear-gradient(60deg, rgba(156,93,105,.045) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(-60deg, rgba(156,93,105,.045) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(0deg, rgba(156,93,105,.035) 0 1px, transparent 1px 22px);
+    -webkit-font-smoothing:antialiased; }
+  button{ font-family:inherit; color:inherit; cursor:pointer; }
+  a{ color:inherit; text-decoration:none; }
+  svg{ display:block; }
+  .ico{ width:22px; height:22px; }
+  .app{ height:100dvh; display:grid; grid-template-rows:auto auto 1fr auto; }
+
+  /* TOP BAR */
+  .topbar{ display:flex; align-items:center; gap:13px; padding:11px 16px; background:var(--surface); border-bottom:1px solid var(--line); position:relative; z-index:30; }
+  .brand{ display:flex; align-items:center; gap:11px; min-width:0; flex:1 1 auto; }
+  .logo{ display:inline-flex; align-items:center; justify-content:center; height:38px; padding:0 13px; border-radius:var(--radius-s); background:linear-gradient(140deg,var(--rose),var(--rose-deep)); color:#fff; font-family:var(--font-head); font-weight:700; letter-spacing:.16em; font-size:15px; text-indent:.14em; box-shadow:var(--shadow-s); flex:0 0 auto; transition:.2s var(--ease); }
+  .logo:hover{ transform:translateY(-1px); }
+  .ctx{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .ctx .a{ font-size:11px; letter-spacing:.14em; color:var(--rose-deep); font-weight:700; }
+  .ctx .b{ font-size:11px; letter-spacing:.05em; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .switch{ display:inline-flex; align-items:center; gap:10px; padding:7px 14px 7px 9px; border:1px solid var(--line); border-radius:99px; background:var(--surface-2); transition:.22s var(--ease); flex:0 0 auto; }
+  .switch:hover{ border-color:var(--rose); }
+  .sw-track{ position:relative; width:42px; height:24px; border-radius:99px; background:var(--faint); transition:background .28s var(--ease); flex:0 0 auto; }
+  .sw-knob{ position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.22); transition:transform .3s var(--ease-out); }
+  .switch.on .sw-track{ background:linear-gradient(140deg,var(--rose),var(--rose-deep)); }
+  .switch.on .sw-knob{ transform:translateX(18px); }
+  .sw-label{ font-size:12.5px; font-weight:700; letter-spacing:.05em; color:var(--ink-soft); white-space:nowrap; }
+  .switch.on .sw-label{ color:var(--rose-deep); }
+  .ham{ display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border:1px solid var(--line); border-radius:var(--radius-s); background:var(--surface-2); color:var(--ink); transition:.22s var(--ease); flex:0 0 auto; }
+  .ham:hover{ border-color:var(--rose); color:var(--rose-deep); }
+
+  /* PROGRESS */
+  .progress{ display:flex; align-items:center; gap:13px; padding:9px 16px; background:var(--surface-2); border-bottom:1px solid var(--line); position:relative; z-index:20; }
+  .phases{ display:flex; gap:7px; flex:0 0 auto; }
+  .phase{ display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); border-radius:99px; padding:5px 12px; background:transparent; font-size:11.5px; letter-spacing:.05em; color:var(--ink-soft); font-weight:700; white-space:nowrap; transition:.22s var(--ease); }
+  .phase .ti{ width:14px; height:14px; }
+  .phase:hover{ border-color:var(--rose); color:var(--rose-deep); }
+  .phase.on{ background:var(--rose); border-color:var(--rose); color:#fff; }
+  .pbar{ flex:1 1 auto; height:6px; border-radius:99px; background:var(--rose-soft); overflow:hidden; min-width:50px; }
+  .pbar i{ display:block; height:100%; width:0; border-radius:99px; background:linear-gradient(90deg,var(--rose),var(--rose-deep)); transition:width .5s var(--ease-out); }
+  .pcount{ flex:0 0 auto; font-size:12px; color:var(--ink-soft); white-space:nowrap; font-weight:700; }
+  .pcount b{ color:var(--rose-deep); font-size:1.3em; font-family:var(--font-head); }
+
+  /* BODY */
+  .body{ position:relative; min-height:0; display:grid; grid-template-columns:1fr var(--dw); transition:grid-template-columns .44s var(--ease); }
+  .body.closed{ grid-template-columns:1fr 0px; }
+  .stage{ position:relative; min-width:0; min-height:0; display:flex; align-items:center; justify-content:center; padding:20px; }
+  /* フレームは JS で画像比(1600:912)にフィット。余白・はみ出しゼロ。 */
+  .imgframe{ position:relative; border-radius:var(--radius); overflow:hidden; background:var(--stage-bg); border:1px solid var(--line); box-shadow:var(--shadow); }
+  .imgframe .layer{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .55s var(--ease); will-change:opacity; }
+  .imgframe .layer.show{ opacity:1; }
+
+  /* DRAWER */
+  .drawer{ position:relative; min-width:0; min-height:0; overflow:hidden; background:var(--surface); border-left:1px solid var(--line); box-shadow:-12px 0 30px rgba(80,45,55,.06); }
+  .body.closed .drawer{ opacity:0; }
+  .drawer .scroll{ position:absolute; inset:0; overflow-y:auto; scrollbar-width:thin; display:flex; flex-direction:column; }
+  .drawer .scroll::-webkit-scrollbar{ width:7px; } .drawer .scroll::-webkit-scrollbar-thumb{ background:var(--rose-soft); border-radius:6px; }
+  .d-head{ flex:0 0 auto; padding:18px 20px 0; }
+  .kicker{ display:inline-block; font-size:10.5px; letter-spacing:.14em; font-weight:800; color:#fff; background:var(--rose); border-radius:99px; padding:3px 11px; }
+  .d-te{ font-size:11.5px; letter-spacing:.1em; color:var(--rose-deep); font-weight:700; margin:12px 0 3px; }
+  .d-title{ font-family:var(--font-head); font-size:22px; font-weight:700; letter-spacing:.04em; margin:0; line-height:1.35; }
+  .d-body{ flex:1 1 auto; display:flex; flex-direction:column; padding:14px 20px 0; }
+  .d-text{ font-size:14.5px; line-height:2.0; letter-spacing:.02em; margin:0 0 14px; }
+  .d-text b{ color:var(--rose-deep); font-weight:700; }
+  .tools{ display:flex; flex-wrap:wrap; gap:7px; margin:0 0 16px; }
+  .tool{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); background:var(--chip-bg); border-radius:99px; padding:5px 11px 5px 9px; font-weight:600; }
+  .tool .ti{ width:16px; height:16px; color:var(--rose-deep); }
+  .onna{ font-size:12.5px; line-height:1.7; color:var(--ink-soft); background:var(--rose-soft); border-radius:var(--radius-s); padding:9px 12px; margin:0 0 14px; border-left:3px solid var(--rose); }
+  .onna::before{ content:"女点前のポイント"; display:block; font-size:10px; letter-spacing:.1em; color:var(--rose-deep); font-weight:800; margin-bottom:3px; }
+
+  /* 下部ゾーン：稽古の心得（先生の顔つき）＋ 豆知識 */
+  .bottom-zone{ margin-top:auto; padding:16px 18px 20px; }
+  .kokoroe{ display:block; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius-s); padding:13px 15px; margin-bottom:13px; }
+  .kokoroe .head{ display:flex; align-items:center; gap:9px; margin-bottom:9px; }
+  .sensei-face{ flex:0 0 auto; width:40px; height:40px; border-radius:50%; overflow:hidden; position:relative; background:radial-gradient(120% 120% at 40% 30%, #fff, var(--rose-soft)); border:2px solid var(--surface); box-shadow:0 3px 9px rgba(80,45,55,.18), 0 0 0 1px var(--line); }
+  .sensei-face img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:52% 20%; }
+  .sensei-face svg{ position:absolute; inset:0; width:100%; height:100%; }
+  .kokoroe .h{ display:flex; align-items:center; gap:7px; font-size:11.5px; letter-spacing:.1em; color:var(--rose-deep); font-weight:800; margin:0; }
+  .kokoroe .h::before{ content:""; width:5px; height:15px; border-radius:2px; background:var(--rose); }
+  .kokoroe p{ margin:0; font-size:13.5px; line-height:1.95; color:var(--ink); }
+  .tip-h{ display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:800; letter-spacing:.06em; color:var(--rose-deep); margin-bottom:8px; }
+  .tip-h .ico{ width:16px; height:16px; }
+  .tip-card{ background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius-s); padding:12px 13px; }
+  .tip-cat{ display:inline-block; font-size:9.5px; letter-spacing:.1em; font-weight:800; color:var(--rose-deep); background:var(--rose-soft); border-radius:99px; padding:2px 9px; margin-bottom:6px; }
+  .tip-tt{ font-family:var(--font-head); font-size:14px; font-weight:700; margin-bottom:4px; }
+  .tip-tx{ font-size:12.5px; line-height:1.8; color:var(--ink-soft); }
+
+  @keyframes enterUp{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:none;} }
+  .anim .d-head, .anim .d-body{ animation:enterUp .42s var(--ease-out) both; }
+  .anim .d-body{ animation-delay:.05s; }
+
+  /* FOOTER */
+  .footer{ display:flex; align-items:center; gap:12px; padding:11px 16px; background:var(--surface); border-top:1px solid var(--line); position:relative; z-index:20; }
+  .navbtn{ display:inline-flex; align-items:center; gap:9px; padding:12px 20px; border:1px solid var(--line); border-radius:99px; background:var(--surface-2); color:var(--ink); font-size:14px; font-weight:700; letter-spacing:.06em; transition:.22s var(--ease); flex:0 0 auto; }
+  .navbtn:hover:not(:disabled){ border-color:var(--rose); color:var(--rose-deep); transform:translateY(-2px); box-shadow:var(--shadow-s); }
+  .navbtn.next{ background:linear-gradient(140deg,var(--rose),var(--rose-deep)); color:#fff; border-color:transparent; box-shadow:var(--shadow-s); }
+  .navbtn:disabled{ opacity:.32; cursor:not-allowed; }
+  .navbtn .ico{ width:18px; height:18px; }
+  .foot-mid{ flex:1 1 auto; text-align:center; min-width:0; }
+  .foot-mid .t{ font-family:var(--font-head); font-size:15px; font-weight:700; letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .foot-mid .s{ font-size:11px; color:var(--ink-soft); letter-spacing:.06em; }
+
+  /* MENU（右） */
+  .scrim{ position:fixed; inset:0; background:rgba(30,20,24,.42); opacity:0; pointer-events:none; transition:.28s var(--ease); z-index:40; }
+  .scrim.show{ opacity:1; pointer-events:auto; }
+  .menu{ position:fixed; top:0; right:0; bottom:0; width:330px; max-width:88vw; z-index:50; background:var(--surface); border-left:1px solid var(--line); box-shadow:var(--shadow); transform:translateX(104%); transition:transform .34s var(--ease-out); display:flex; flex-direction:column; }
+  .menu.show{ transform:none; }
+  .menu-h{ padding:16px 16px 8px; border-bottom:1px solid var(--line); }
+  .menu-h h2{ font-family:var(--font-head); font-size:16px; margin:2px; letter-spacing:.06em; }
+  .menu-h p{ font-size:11px; color:var(--ink-soft); margin:4px 2px 0; }
+  .menu-scroll{ flex:1 1 auto; overflow-y:auto; padding:10px 12px 16px; scrollbar-width:thin; }
+  .nav-phase{ font-size:10.5px; letter-spacing:.1em; color:var(--faint); font-weight:800; margin:12px 2px 5px; }
+  .nav-item{ display:flex; gap:9px; align-items:center; width:100%; text-align:left; background:transparent; border:0; border-radius:var(--radius-s); padding:8px 9px; font-size:12.5px; color:var(--ink-soft); transition:.16s var(--ease); }
+  .nav-item:hover{ background:var(--surface-2); color:var(--ink); }
+  .nav-item .num{ flex:0 0 auto; width:23px; height:23px; border-radius:50%; border:1px solid var(--line); display:inline-flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; }
+  .nav-item.cur{ background:var(--rose-soft); color:var(--rose-deep); font-weight:700; }
+  .nav-item.cur .num{ background:var(--rose); border-color:var(--rose); color:#fff; }
+  .nav-item.done .num{ background:var(--chip-bg); }
+
+  /* ≤820px：縦積み（画像が上・解説が下）。本来のレスポンシブ。 */
+  @media (max-width:820px){
+    .body{ grid-template-columns:1fr; grid-template-rows:auto 1fr; transition:grid-template-rows .4s var(--ease); }
+    .body.closed{ grid-template-columns:1fr; grid-template-rows:auto 0px; }
+    .stage{ align-items:flex-start; padding:14px 14px 6px; }
+    .imgframe{ width:100%!important; height:auto!important; aspect-ratio:1600/912; }
+    .drawer{ border-left:0; border-top:1px solid var(--line); box-shadow:0 -8px 22px rgba(80,45,55,.05); }
+    .ctx .b{ display:none; } .navbtn{ padding:11px 15px; font-size:13px; }
+  }
+  @media (max-width:560px){
+    .topbar{ gap:9px; padding:10px 12px; }
+    .logo{ height:34px; padding:0 11px; font-size:14px; }
+    .switch{ padding:6px; gap:0; } .switch .sw-label{ display:none; }
+    .progress{ gap:9px; padding:8px 12px; flex-wrap:wrap; }
+    .pcount{ font-size:11px; }
+    .footer{ gap:8px; padding:10px 12px; } .navbtn{ padding:10px 13px; font-size:12.5px; }
+    .foot-mid .t{ font-size:13.5px; }
+  }
+  @media (max-width:480px){ .stage{ padding:12px; } .phases .phase{ padding:5px 9px; } }
+  @media (prefers-reduced-motion:reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+
+<!-- アイコン定義（UI＋道具ピクトグラム 24x24・currentColor） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ham" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></g></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17c0-1.5-1-2.5-2-4-1.4-2-1-5 1-6.6 2-1.6 6-1.6 8 0 2 1.6 2.4 4.6 1 6.6-1 1.5-2 2.5-2 4"/><path d="M9.5 17.5h5M10 20.5h4"/></g></symbol>
+  <symbol id="i-sensei" viewBox="0 0 64 64"><rect width="64" height="64" fill="#efe1e4"/><path d="M14 60c0-9 8-14 18-14s18 5 18 14z" fill="#9c5d69"/><circle cx="32" cy="32" r="16" fill="#f3ddc9"/><path d="M16 30c0-10 7-16 16-16s16 6 16 16c-3-5-9-7-16-7s-13 2-16 7z" fill="#b9b3ae"/><circle cx="26" cy="33" r="2" fill="#3a2e26"/><circle cx="38" cy="33" r="2" fill="#3a2e26"/><path d="M27 40c3 2.5 7 2.5 10 0" fill="none" stroke="#9c5d69" stroke-width="2" stroke-linecap="round"/></symbol>
+  <!-- 道具 -->
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <symbol id="tt-kama" viewBox="0 0 24 24"><path d="M6.5 12c0-4 11-4 11 0"/><path d="M7 12v3a5 3 0 0 0 10 0v-3"/><path d="M12 6.5V9"/><path d="M9.5 18.5h5"/></symbol>
+  <symbol id="tt-mizusashi" viewBox="0 0 24 24"><path d="M8 10h8v6a2.5 2.5 0 0 1-8 0z"/><path d="M7 10h10"/><path d="M12 6.5V9"/></symbol>
+  <symbol id="tt-chawan" viewBox="0 0 24 24"><path d="M5 11h14l-2 5.2A6 2.4 0 0 1 7 16.2z"/><path d="M5 11a7 2 0 0 1 14 0"/></symbol>
+  <symbol id="tt-natsume" viewBox="0 0 24 24"><path d="M8 11a4 2.4 0 0 1 8 0v4a4 2 0 0 1-8 0z"/><path d="M8 11a4 2 0 0 0 8 0"/><path d="M12 6.5V8.4"/></symbol>
+  <symbol id="tt-kensui" viewBox="0 0 24 24"><path d="M5 12h14l-1.8 4A6 2 0 0 1 6.8 16z"/><path d="M5 12a7 1.8 0 0 1 14 0"/></symbol>
+  <symbol id="tt-futaoki" viewBox="0 0 24 24"><path d="M9 11h6v5H9z"/><path d="M9 11a3 1.4 0 0 1 6 0"/><path d="M9 16a3 1.4 0 0 0 6 0"/></symbol>
+  <symbol id="tt-hishaku" viewBox="0 0 24 24"><path d="M6 11a3 2 0 0 1 6 0v.4a3 2 0 0 1-6 0z"/><path d="M11.5 10.5 19 6.5"/></symbol>
+  <symbol id="tt-fukusa" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M6.5 12h11M12 6.5v11"/></symbol>
+  <symbol id="tt-chashaku" viewBox="0 0 24 24"><path d="M5 18.5 15.5 7.5"/><path d="M15.5 7.5c1.8-1.9 4-.4 3 1.7"/></symbol>
+  <symbol id="tt-chasen" viewBox="0 0 24 24"><path d="M10.7 13.5h2.6v5.5h-2.6z"/><path d="M12 13.5 9.2 6.5M12 13.5V6M12 13.5l2.8-7"/></symbol>
+  <symbol id="tt-futa" viewBox="0 0 24 24"><path d="M6.5 15a5.5 4 0 0 1 11 0z"/><path d="M12 8.5V11"/><path d="M5.5 15h13"/></symbol>
+  <symbol id="tt-chakin" viewBox="0 0 24 24"><rect x="6" y="9" width="12" height="6.5" rx="1.4"/><path d="M6 12.2h12"/></symbol>
+  </g>
+</svg>
+
+<div class="scrim" id="scrim"></div>
+<nav class="menu" id="menu" aria-label="全ての手">
+  <div class="menu-h"><h2>全ての手から選ぶ</h2><p>全 <span id="menuTotal">51</span> 手・三段（清め／点て／仕舞い）</p></div>
+  <div class="menu-scroll" id="navList"></div>
+</nav>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <a class="logo" href="temae-cover.html" aria-label="表紙へ戻る">茶の湯</a>
+      <div class="ctx"><span class="a" id="ctxA">表千家・女点前</span><span class="b" id="ctxB">風炉（夏）／薄茶／運び点前</span></div>
+    </div>
+    <button class="switch on" id="toggleBtn" type="button" role="switch" aria-checked="true" aria-label="解説の表示・非表示">
+      <span class="sw-track"><span class="sw-knob"></span></span><span class="sw-label">解説 <b id="swState">ON</b></span>
+    </button>
+    <button class="ham" id="hamBtn" type="button" aria-label="全ての手のメニューを開く"><svg class="ico"><use href="#i-ham"/></svg></button>
+  </header>
+
+  <div class="progress">
+    <div class="phases" id="phases"></div>
+    <div class="pbar"><i id="pbarFill"></i></div>
+    <div class="pcount">第 <b id="pcur">1</b> 手 ／ 全 <span id="ptot">51</span> 手</div>
+  </div>
+
+  <div class="body" id="bodyGrid">
+    <section class="stage" id="stage" aria-label="お点前の様子">
+      <div class="imgframe" id="imgframe">
+        <img class="layer" id="imgA" alt="">
+        <img class="layer" id="imgB" alt="">
+      </div>
+    </section>
+
+    <aside class="drawer" id="drawer" aria-label="解説と豆知識">
+      <div class="scroll" id="drawerScroll">
+        <div class="d-head">
+          <span class="kicker" id="ePhase">① 清め</span>
+          <div class="d-te" id="eTe">運び出し</div>
+          <h2 class="d-title" id="eTitle">初座（風炉と釜）</h2>
+        </div>
+        <div class="d-body">
+          <p class="d-text" id="eText"></p>
+          <div class="tools" id="eTools"></div>
+          <p class="onna" id="eOnna" style="display:none"></p>
+
+          <div class="bottom-zone">
+            <div class="kokoroe">
+              <div class="head">
+                <span class="sensei-face" aria-hidden="true">
+                  <img id="senseiImg" src="./img/2.png" alt="">
+                  <svg id="senseiFallback" style="display:none"><use href="#i-sensei"/></svg>
+                </span>
+                <div class="h">稽古の心得（先生より）</div>
+              </div>
+              <p id="ePoint"></p>
+            </div>
+            <div class="tip">
+              <div class="tip-h"><svg class="ico"><use href="#i-bulb"/></svg>豆知識</div>
+              <div class="tip-card">
+                <span class="tip-cat" id="tipCat">道具</span>
+                <div class="tip-tt" id="tipTt"></div>
+                <div class="tip-tx" id="tipTx"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="footer">
+    <button class="navbtn prev" id="prevBtn" type="button" aria-label="前の手へ"><svg class="ico"><use href="#i-left"/></svg>前へ</button>
+    <div class="foot-mid"><div class="t" id="footT">初座（風炉と釜）</div><div class="s" id="footS">① 清め ・ 運び出し</div></div>
+    <button class="navbtn next" id="nextBtn" type="button" aria-label="次の手へ">次へ<svg class="ico"><use href="#i-right"/></svg></button>
+  </footer>
+</div>
+
+<script src="./data/steps.js"></script>
+<script src="./data/tidbits.js"></script>
+<script>
+"use strict";
+(function(){
+  const ST = window.SADO_STEPS || {steps:[],phases:[],meta:{}};
+  const STEPS = ST.steps || [], PHASES = ST.phases || [], META = ST.meta || {};
+  const TID = window.SADO_TIDBITS || [];
+  const TOTAL = STEPS.length;
+  const AR = 1600/912;   // 画像の縦横比
+
+  /* 道具→ピクトグラム */
+  const TOOL_ICON = { "風炉釜":"kama","釜":"kama","水指":"mizusashi","茶碗":"chawan","棗":"natsume","建水":"kensui","蓋置":"futaoki","柄杓":"hishaku","帛紗":"fukusa","茶杓":"chashaku","茶筅":"chasen","釜の蓋":"futa","茶巾":"chakin" };
+  const PHASE_ICON = { junbi:"fukusa", tate:"chasen", shimai:"chawan" };
+
+  /* 概要文ブラッシュアップ（表千家・風炉・薄茶・運び点前。PROCEDURE.md準拠／サンプル・要監修。
+     分量や置き向き等の細部は社中・教本で差があります） */
+  const ENRICH = {
+    1:"点前座の<b>左前方</b>に風炉が据えられ、釜がかかっています。夏は火を客から遠ざける<b>風炉</b>の設え。亭主は<b>帛紗を左腰</b>につけ、心を静めて席に入ります。",
+    2:"<b>水指</b>を両手で胸の高さに持ち、にじって進みます。<b>風炉の右横</b>の定座へ静かに据えましょう。塗蓋を傷めぬよう、置く間際まで気を抜かずに。",
+    3:"仕組んだ<b>茶碗</b>と<b>棗</b>を運び出します。水指の前に<b>茶碗を左・棗を右</b>、三器が<b>二等辺三角</b>を描くように置くのが目安です。",
+    4:"<b>蓋置</b>と<b>柄杓</b>を仕組んだ<b>建水</b>を持ち出し、居前に座ります。建水は控えめな器、ひっそりと運びます。",
+    5:"<b>女性は左手で柄杓を上げ、右手で蓋置を取り出します</b>（男点前との最初の分かれ目）。蓋置を<b>風炉の左</b>へ置き、柄杓を引いて構えます。",
+    6:"建水を膝の線へ進め、客と<b>総礼</b>。ここで主客の呼吸を合わせ、いよいよ点前が始まります。",
+    7:"<b>茶碗</b>を体の<b>正面</b>へ出し、清めの構えを整えます。",
+    8:"<b>棗</b>を清めの位置へ出し、茶碗と棗を手前に構えます。",
+    9:"<b>帛紗をさばき</b>、<b>棗</b>を清めます。蓋から胴へ<b>「こ」の字</b>を描くように。塵を払うと同時に、亭主が心を改める所作です。",
+    10:"清めた<b>棗</b>を所定の位置へ置きます（ここでは茶杓はのせません）。",
+    11:"帛紗を捌き直し、<b>茶杓</b>を拭き清めます。竹の節を傷めぬよう、ていねいに。",
+    12:"清めた<b>茶杓</b>を<b>棗の上</b>に置きます。",
+    13:"<b>茶筅</b>を取り、<b>棗の右</b>に立てて置きます。これで清めが整いました。",
+    14:"<b>茶碗</b>を手前に引き、茶筅通しの支度に移ります。",
+    15:"<b>柄杓</b>を取って立て、湯を扱う構えをとります。",
+    16:"<b>帛紗で釜の蓋</b>を取り、<b>蓋置</b>の上へ。熱い蓋は帛紗ごしにそっと扱います。",
+    17:"<b>茶巾</b>を釜蓋のつまみ手前に、縦に置きます。",
+    18:"<b>柄杓</b>で湯を汲み、<b>茶碗</b>へ入れます。湯を切る所作も静かに。",
+    19:"柄杓を釜の口に掛けて置きます（<b>置き柄杓</b>）。合を釜口に、柄はまっすぐ。",
+    20:"茶碗の湯で<b>茶筅通し</b>。穂先を上げ下げして点検し、茶筅を清めます。抜けやすい所作なので、ひと呼吸おいて。",
+    21:"<b>穂先を改め</b>、茶筅を元へ戻します。",
+    22:"湯を<b>反時計に2〜3度</b>回して茶碗を温めます。お茶がよく映えるための心づかい。",
+    23:"温めた湯を<b>建水</b>へあけます。",
+    24:"<b>茶巾</b>で茶碗を拭き清めます。底から縁へ、ていねいに。",
+    25:"拭き清めた茶碗を、茶を点てる<b>定位置</b>へ置きます。",
+    26:"<b>棗</b>を取って蓋を開けます。青々とした抹茶が現れます。",
+    27:"茶杓で<b>一杓半</b>ほど、静かにすくいます（分量は目安）。",
+    28:"抹茶を茶碗へ入れ、<b>三の字</b>に均します。",
+    29:"棗の蓋を閉じ、茶杓を縁で軽く<b>コンと</b>打って元へ戻します。",
+    30:"右手でつまみを取り左手に持ち替え、<b>水指の蓋</b>を開けて左横に立てかけます。塗蓋を傷めぬよう静かに。",
+    31:"<b>柄杓</b>で湯を汲み、茶碗へ注ぎます（<b>三口半</b>が目安）。",
+    32:"置き柄杓のあと、<b>茶筅</b>で点てます。手首はやわらかく。",
+    33:"泡を整えるように点てます。<b>表千家は泡を立てすぎず</b>、自然な姿に。",
+    34:"薄茶が点て上がりました。茶碗を<b>反時計に回し</b>、<b>正面を客へ</b>向けて差し上げます。",
+    35:"返った茶碗に水を汲み入れ、すすぎに移ります（引き柄杓）。",
+    36:"茶碗の水で<b>茶筅をすすぎ</b>ます（茶筅通し）。",
+    37:"茶筅を持ち上げ、<b>穂先を改め</b>ます。",
+    38:"茶碗を傾け、水を<b>建水</b>にあけます。",
+    39:"<b>茶巾</b>を茶碗に入れます。",
+    40:"茶巾を整えて茶碗に納めます。",
+    41:"茶碗に<b>茶筅を仕組み</b>ます。",
+    42:"<b>帛紗を捌き</b>、茶杓を清めます（女性は建水を先に下げてから）。",
+    43:"清めた茶杓を<b>茶碗の上にのせ</b>、茶碗を初めの位置に直します。",
+    44:"<b>棗</b>を元の位置へ移します。",
+    45:"<b>茶碗</b>を元の位置へ移します。",
+    46:"柄杓で<b>釜に水を二杓</b>さします。湯を改める所作です。",
+    47:"<b>柄杓を構え</b>ます。",
+    48:"柄杓を構えたまま、<b>釜の蓋</b>を閉めます（風炉は<b>少しきって</b>置きます）。",
+    49:"<b>柄杓を蓋置に置き</b>、<b>水指の蓋</b>を閉めます（逆三手）。",
+    50:"<b>建水を左手</b>に、<b>右手に柄杓と蓋置</b>を構えて持ち帰ります（女性の形）。",
+    51:"<b>茶碗と棗</b>を持ち帰り、最後に<b>水指</b>を両手で。襖を閉めて<b>総礼</b>、点前を終えます。"
+  };
+
+  /* 先生の「稽古の心得」コメント（全51手それぞれ別。所作への心構え＝サンプル・要監修） */
+  const KOKOROE = {
+    1:"火と向き合う前に、まず心を静めましょう。お点前は、座についた瞬間から始まっています。",
+    2:"重い水指も、軽そうに運ぶのが品。両手の高さを変えず、足はにじって進みます。",
+    3:"三器の置き合わせは点前の土台。位置が定まれば、心も定まります。",
+    4:"建水は控えめな器。だからこそ、ていねいに扱う姿が見られています。",
+    5:"柄杓と蓋置の出し方が、女点前の最初の見せどころ。ゆっくり、迷わず。",
+    6:"総礼は形だけの礼にあらず。客と心をひとつにする、大切なひと呼吸です。",
+    7:"茶碗を正面に。ここから清めに入ります。背筋を、すっと伸ばして。",
+    8:"棗を手元へ。次の所作を思い描きながら、落ち着いて。",
+    9:"帛紗さばきは、心を整える所作。急がず、指先まで神経を通します。",
+    10:"清めた棗は、定めの場所へ静かに。置く音さえ、もてなしの一部です。",
+    11:"茶杓は細く繊細。節を傷めぬよう、やさしく拭き清めます。",
+    12:"ひとつ終えるごとに、ひと呼吸。茶杓を棗の上へ静かに。",
+    13:"茶筅を立てれば、清めは結び。ここまでの流れを心で振り返って。",
+    14:"茶碗を引いて、いよいよ茶筅通し。手元に視線を集めましょう。",
+    15:"柄杓を立てる姿に、点前の品が表れます。肘を張らず、自然に。",
+    16:"熱い釜の蓋は帛紗ごしに。あわてず、そっと蓋置へ預けます。",
+    17:"茶巾は清らかさの象徴。向きを整え、きちんと置きましょう。",
+    18:"湯を汲む音、注ぐ音。耳でも点前を感じてもらう心づもりで。",
+    19:"置き柄杓は、ひと区切りの所作。柄をまっすぐ、美しく見せて。",
+    20:"茶筅通しは抜けやすい所。穂先を一本ずつ確かめる気持ちで。",
+    21:"穂先を改めたら、静かに戻します。道具を労わる心を忘れずに。",
+    22:"茶碗を温めるのは、お茶を美しく点てるため。湯をやわらかく回して。",
+    23:"湯を捨てる所作も点前のうち。雑にならぬよう、最後まで丁寧に。",
+    24:"茶巾で拭く手は、円を描くように。乾いた清らかな碗に仕上げます。",
+    25:"茶碗を定座へ。さあ、いよいよお茶を点てます。心を込めて。",
+    26:"棗の蓋を開ければ、鮮やかな緑。この一瞬の美しさも味わって。",
+    27:"抹茶は静かにすくいます。分量より、ひと匙に込める気持ちを大切に。",
+    28:"三の字に均すのは、湯がよくなじむため。手早く、けれど落ち着いて。",
+    29:"茶杓を縁でコン。小さな音にも、けじめがあります。",
+    30:"水指の蓋を開けるのは、点てる支度の合図。塗蓋を傷めぬよう静かに。",
+    31:"湯を注ぎ、いよいよ点てます。呼吸を整えて、心をひとつに。",
+    32:"茶筅は手首をやわらかく。力ではなく、リズムで点てます。",
+    33:"表千家は泡を立てすぎず、自然な姿に。お茶そのものを生かして。",
+    34:"点て上がった一椀を、正面を客へ。点前の心が、ここに結ばれます。",
+    35:"二服目のすすぎへ。終わりに向けても、気をゆるめずに。",
+    36:"茶筅をすすぐ手も、はじめと同じ丁寧さで。",
+    37:"穂先をもう一度改めて。道具を整えることは、心を整えること。",
+    38:"水をあける所作も静かに。終いの所作こそ、人柄が出ます。",
+    39:"茶巾を茶碗へ。片付けにも、始まりと同じ心を。",
+    40:"茶巾を整えて納めます。ひとつひとつ、もとの姿へ。",
+    41:"茶筅を仕組み、道具を結びます。来た時の形へ、ていねいに。",
+    42:"仕舞いの帛紗さばき。女点前は建水を先に下げてから。",
+    43:"清めた茶杓は伏せて置きます。最後まで、道具を敬う心で。",
+    44:"棗をもとの位置へ。流れを思い出しながら、ひとつずつ。",
+    45:"茶碗をもとの位置へ。畳の目に沿って、まっすぐに。",
+    46:"釜に水を二杓。湯をいたわり、次の人へ釜を渡す心づかいです。",
+    47:"柄杓を構える姿で、点前の締まりが決まります。背筋を正して。",
+    48:"釜の蓋を閉めます。風炉は少しきって置くのが習い。",
+    49:"水指の蓋を閉じれば、片付けはあと少し。最後まで静かに。",
+    50:"建水・柄杓・蓋置を持ち帰ります。左回りで、しずしずと。",
+    51:"茶碗と棗、そして水指を納め、総礼。一会のしめくくり、心を込めて。"
+  };
+
+  /* 各手に固有の豆知識を割り当て（全51手すべて別。tidbits.js のタイトルで参照） */
+  const STEP_TIP = {
+    1:"風炉は夏の設え", 2:"水指と釜の役割", 3:"運び点前は基本の形", 4:"建水は水こぼし", 5:"蓋置は釜蓋・柄杓の留め",
+    6:"和敬清寂の四つの心", 7:"茶碗の正面を避ける", 8:"棗は薄茶器", 9:"帛紗で道具を清める", 10:"清めの所作の意味",
+    11:"茶杓は抹茶をすくう匙", 12:"茶杓の銘という文化", 13:"茶筅は茶を点てる道具", 14:"楽茶碗と利休の美意識", 15:"柄杓で湯水を汲む",
+    16:"炭点前の役割", 17:"茶巾は清浄の白布", 18:"抹茶を点てる喫茶法", 19:"風炉の灰型", 20:"銘は問答の楽しみ",
+    21:"唐物と和物の茶碗", 22:"季節を映す取り合わせ", 23:"水屋は準備の場", 24:"井戸茶碗の景色", 25:"床の間と掛物",
+    26:"表千家の点前の特徴", 27:"一期一会の心", 28:"薄茶と濃茶の違い", 29:"利休七則の教え", 30:"不審菴は表千家の象徴",
+    31:"茶の湯と禅のつながり", 32:"千家十職とは", 33:"主菓子と干菓子", 34:"茶碗を回す理由", 35:"菓子を先にいただく",
+    36:"千利休と侘び茶の大成", 37:"武野紹鴎は利休の師", 38:"村田珠光と侘び茶の源流", 39:"古田織部と織部好み", 40:"表千家の祖・江岑宗左",
+    41:"三千家の成り立ち", 42:"千宗旦と侘びの継承", 43:"栄西と茶の伝来", 44:"天下三宗匠", 45:"茶銘は季節の言葉",
+    46:"風炉先屏風の役割", 47:"炉と風炉の使い分け", 48:"炉開きと茶人の正月", 49:"にじり口の意味", 50:"露地という庭",
+    51:"扇子を前に置く挨拶"
+  };
+
+  let cur = 0, open = true;
+  const $ = id => document.getElementById(id);
+  const grid = $('bodyGrid'), stage = $('stage'), frame = $('imgframe');
+
+  if (META.ryugi) $('ctxA').textContent = META.ryugi + '・' + (META.gender||'');
+  if (META.kisetsu) $('ctxB').textContent = [META.kisetsu, META.cha, META.style].filter(Boolean).join('／');
+  $('ptot').textContent = TOTAL; $('menuTotal').textContent = TOTAL;
+
+  const sImg=$('senseiImg'), sFb=$('senseiFallback');
+  sImg.addEventListener('error', ()=>{ sImg.style.display='none'; sFb.style.display=''; });
+
+  const phaseById = {}; PHASES.forEach(p => phaseById[p.id]=p);
+  const firstIdx = pid => STEPS.findIndex(s => s.phase===pid);
+
+  const phasesWrap = $('phases');
+  PHASES.forEach(p => {
+    const b=document.createElement('button'); b.className='phase'; b.type='button'; b.dataset.pid=p.id;
+    const ic = PHASE_ICON[p.id]; b.innerHTML = (ic?'<svg class="ti"><use href="#tt-'+ic+'"/></svg>':'') + p.label;
+    b.title=p.sub||'';
+    b.addEventListener('click', () => { const i=firstIdx(p.id); if(i>=0) goTo(i); });
+    phasesWrap.appendChild(b);
+  });
+
+  const navList = $('navList');
+  PHASES.forEach(p => {
+    const h=document.createElement('div'); h.className='nav-phase'; h.textContent=p.label+'　'+(p.sub||''); navList.appendChild(h);
+    STEPS.forEach((s,i)=>{ if(s.phase!==p.id) return;
+      const b=document.createElement('button'); b.className='nav-item'; b.type='button'; b.dataset.idx=i;
+      b.innerHTML='<span class="num">'+s.n+'</span><span>'+s.title+'</span>';
+      b.addEventListener('click', () => { goTo(i); openMenu(false); });
+      navList.appendChild(b);
+    });
+  });
+
+  const TIP_BY_TITLE={}; TID.forEach(t=>{ TIP_BY_TITLE[t.title]=t; });
+  function tipFor(n){ return TIP_BY_TITLE[STEP_TIP[n]] || TID[(n-1)%(TID.length||1)] || null; }
+
+  /* フレームを画像比にフィット（はみ出し・余白ゼロ） */
+  function fitFrame(){
+    const cs=getComputedStyle(stage);
+    const aw=stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const ah=stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if(aw<=0||ah<=0) return;
+    let w=aw, h=w/AR; if(h>ah){ h=ah; w=h*AR; }
+    frame.style.width=Math.round(w)+'px'; frame.style.height=Math.round(h)+'px';
+  }
+  function animateFit(dur){ const t0=performance.now(); (function loop(t){ fitFrame(); if(t-t0<dur) requestAnimationFrame(loop); })(performance.now()); }
+  window.addEventListener('resize', fitFrame);
+  grid.addEventListener('transitionend', e=>{ if(e.propertyName==='grid-template-columns') fitFrame(); });
+
+  /* 画像クロスフェード（フェードのみ） */
+  const imgA=$('imgA'), imgB=$('imgB'); let front=imgA, back=imgB;
+  function showImage(src, alt){
+    const pre=new Image();
+    const apply=()=>{ back.src=src; back.alt=alt||''; back.classList.add('show'); front.classList.remove('show'); const t=front; front=back; back=t; };
+    pre.onload=apply; pre.onerror=apply; pre.src=src;
+  }
+
+  const drawerScroll=$('drawerScroll');
+  function replay(){ drawerScroll.classList.remove('anim'); void drawerScroll.offsetWidth; drawerScroll.classList.add('anim'); }
+
+  function render(){
+    const s=STEPS[cur]; if(!s) return;
+    const p=phaseById[s.phase]||{label:''};
+    showImage(s.img, s.title);
+    $('ePhase').textContent=p.label; $('eTe').textContent=s.te||''; $('eTitle').textContent=s.title;
+    $('eText').innerHTML = ENRICH[s.n] || s.text || '';
+    $('ePoint').textContent = KOKOROE[s.n] || '';
+    const onna=$('eOnna'); if(s.onna){ onna.style.display=''; onna.textContent=s.onna; } else onna.style.display='none';
+    const tools=$('eTools'); tools.innerHTML='';
+    (s.tools||[]).forEach(t=>{ const c=document.createElement('span'); c.className='tool';
+      const id=TOOL_ICON[t]; c.innerHTML=(id?'<svg class="ti"><use href="#tt-'+id+'"/></svg>':'')+t; tools.appendChild(c); });
+    const td=tipFor(s.n);
+    if(td){ $('tipCat').textContent=td.category||'豆知識'; $('tipTt').textContent=td.title||''; $('tipTx').textContent=td.text||''; }
+    $('footT').textContent=s.title; $('footS').textContent=p.label+(s.te?' ・ '+s.te:'');
+
+    $('pcur').textContent=s.n;
+    $('pbarFill').style.width=(TOTAL?((cur+1)/TOTAL*100):0)+'%';
+    Array.from(phasesWrap.children).forEach(b=>b.classList.toggle('on', b.dataset.pid===s.phase));
+    Array.from(navList.querySelectorAll('.nav-item')).forEach(b=>{ const i=+b.dataset.idx; b.classList.toggle('cur',i===cur); b.classList.toggle('done',i<cur); });
+    $('prevBtn').disabled=cur===0; $('nextBtn').disabled=cur===TOTAL-1;
+    drawerScroll.scrollTop=0; replay();
+  }
+
+  function goTo(i){ i=Math.max(0,Math.min(TOTAL-1,i)); cur=i; render(); }
+  function next(){ if(cur<TOTAL-1) goTo(cur+1); }
+  function prev(){ if(cur>0) goTo(cur-1); }
+
+  function setOpen(o){
+    open=o; grid.classList.toggle('closed', !o);
+    const t=$('toggleBtn'); t.classList.toggle('on', o); t.setAttribute('aria-checked', String(o));
+    $('swState').textContent = o ? 'ON' : 'OFF';
+    animateFit(480);   // 開閉でステージ幅が変わるのでフィットし直す
+  }
+  $('toggleBtn').addEventListener('click', () => setOpen(!open));
+
+  const menu=$('menu'), scrim=$('scrim');
+  function openMenu(o){ menu.classList.toggle('show',o); scrim.classList.toggle('show',o); }
+  $('hamBtn').addEventListener('click', () => openMenu(true));
+  scrim.addEventListener('click', () => openMenu(false));
+
+  document.addEventListener('keydown', e=>{
+    if(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if(e.key==='ArrowRight'){ e.preventDefault(); next(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); prev(); }
+    else if(e.key==='Escape'){ openMenu(false); }
+  });
+  $('prevBtn').addEventListener('click', prev);
+  $('nextBtn').addEventListener('click', next);
+
+  render();
+  fitFrame();
+  window.addEventListener('load', fitFrame);
+})();
+</script>
+</body>
+</html>
