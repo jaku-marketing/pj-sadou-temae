@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!--
+  席ぐるり オープニング案：線画の茶碗が「ニョキーン」と描かれ、湯気が立つ。
+  色は 黒 → 赤 → ピンク を1つずつ、ループ。
+  ・SVGのストローク・ドロー（stroke-dashoffset）で描き出し。湯気は立ちのぼり。
+  ・JSで各パスの正確な長さ(getTotalLength)を --len に設定 → 綺麗に描き上がる。
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>席ぐるり — 茶碗オープニング（線画ドロー）</title>
+<style>
+  :root{
+    --rose:#c98a96; --rose-deep:#9c5d69; --rose-soft:#efe1e4;
+    --bg:#f1ece9; --ink:#2b2421; --ink-soft:#857873; --line:rgba(43,36,33,.12);
+    --font:"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+    --font-head:"Hiragino Mincho ProN","Noto Serif JP",serif;
+    --ease-out:cubic-bezier(.16,.84,.34,1);
+    --cycle:9s;          /* 1色あたり 3s ×3色 = 9s ループ */
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:var(--font); color:var(--ink); background:#e7ddd8; -webkit-font-smoothing:antialiased; }
+  .page{ min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px; }
+
+  /* スマホのトップ画面を想定したフレーム */
+  .phone{ width:min(380px,100%); height:min(680px,86vh); border-radius:30px; background:var(--bg);
+    background-image:repeating-linear-gradient(60deg, rgba(156,93,105,.05) 0 1px, transparent 1px 22px),repeating-linear-gradient(-60deg, rgba(156,93,105,.05) 0 1px, transparent 1px 22px);
+    box-shadow:0 26px 60px rgba(0,0,0,.25); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; overflow:hidden; position:relative; }
+  .glow{ position:absolute; top:24%; width:220px; height:220px; border-radius:50%; background:radial-gradient(circle, rgba(201,138,150,.18), transparent 70%); }
+
+  .cha-wrap{ position:relative; width:160px; height:160px; }
+  .cha{ position:absolute; inset:0; opacity:0; animation:op var(--cycle) ease-in-out infinite; }
+  .cha svg{ width:100%; height:100%; overflow:visible; }
+  .cup{ fill:none; stroke:currentColor; stroke-width:3; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:var(--len,360); stroke-dashoffset:var(--len,360); animation:draw var(--cycle) ease-in-out infinite; }
+  .steam path{ fill:none; stroke:currentColor; stroke-width:2.3; stroke-linecap:round; opacity:0; transform-box:fill-box; transform-origin:center bottom; animation:rise 1.9s ease-in-out infinite; }
+  .steam path:nth-child(2){ animation-delay:.5s; } .steam path:nth-child(3){ animation-delay:1s; }
+
+  /* 色：黒 → 赤 → ピンク。順番に出すため delay を 0 / 3s / 6s */
+  .cha.black{ color:#2b2622; } .cha.black, .cha.black .cup{ animation-delay:0s; }
+  .cha.red{   color:#c8442f; } .cha.red,   .cha.red .cup{   animation-delay:3s; }
+  .cha.pink{  color:#df84a0; } .cha.pink,  .cha.pink .cup{  animation-delay:6s; }
+
+  @keyframes op{ 0%{opacity:0;} 4%{opacity:1;} 28%{opacity:1;} 33%{opacity:0;} 100%{opacity:0;} }
+  @keyframes draw{ 0%{ stroke-dashoffset:var(--len,360);} 17%{ stroke-dashoffset:0;} 100%{ stroke-dashoffset:0;} }
+  @keyframes rise{ 0%{opacity:0; transform:translateY(5px) scaleY(.85);} 35%{opacity:.85;} 100%{opacity:0; transform:translateY(-16px) scaleY(1.1);} }
+
+  .title{ font-family:var(--font-head); font-size:38px; letter-spacing:.12em; margin-top:6px; }
+  .title-sub{ font-size:12px; letter-spacing:.16em; color:var(--rose-deep); font-weight:700; }
+
+  .cap{ font-size:12.5px; color:#5a4a44; text-align:center; line-height:1.7; max-width:380px; }
+  .cap b{ color:var(--rose-deep); }
+  @media (prefers-reduced-motion:reduce){ .cha.black{opacity:1;} .cup{ stroke-dashoffset:0; } *{ animation:none!important; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="phone">
+    <div class="glow"></div>
+    <div class="cha-wrap" id="chawrap">
+      <!-- 黒 → 赤 → ピンク の3碗（線画）。順に描かれ、湯気が立つ。 -->
+      <div class="cha black"><svg viewBox="0 0 100 100">
+        <g class="steam"><path d="M40 30 C36 24 44 22 40 16 C37 12 43 10 40 5"/><path d="M50 30 C46 24 54 22 50 15 C47 11 53 9 50 3"/><path d="M60 30 C56 24 64 22 60 16 C57 12 63 10 60 5"/></g>
+        <path class="cup" d="M22 40 a28 7 0 1 0 56 0 a28 7 0 1 0 -56 0 M22 40 C22 62 30 82 50 82 C70 82 78 62 78 40"/>
+      </svg></div>
+      <div class="cha red"><svg viewBox="0 0 100 100">
+        <g class="steam"><path d="M40 30 C36 24 44 22 40 16 C37 12 43 10 40 5"/><path d="M50 30 C46 24 54 22 50 15 C47 11 53 9 50 3"/><path d="M60 30 C56 24 64 22 60 16 C57 12 63 10 60 5"/></g>
+        <path class="cup" d="M22 40 a28 7 0 1 0 56 0 a28 7 0 1 0 -56 0 M22 40 C22 62 30 82 50 82 C70 82 78 62 78 40"/>
+      </svg></div>
+      <div class="cha pink"><svg viewBox="0 0 100 100">
+        <g class="steam"><path d="M40 30 C36 24 44 22 40 16 C37 12 43 10 40 5"/><path d="M50 30 C46 24 54 22 50 15 C47 11 53 9 50 3"/><path d="M60 30 C56 24 64 22 60 16 C57 12 63 10 60 5"/></g>
+        <path class="cup" d="M22 40 a28 7 0 1 0 56 0 a28 7 0 1 0 -56 0 M22 40 C22 62 30 82 50 82 C70 82 78 62 78 40"/>
+      </svg></div>
+    </div>
+    <div class="title">席ぐるり</div>
+    <div class="title-sub">お稽古の席順メーカー</div>
+  </div>
+  <p class="cap">線画の茶碗が<b>ニョキーンと描かれ → 湯気が立つ</b>。色は<b>黒 → 赤 → ピンク</b>を順にループ。<br>これでイメージ合っていますか？（色・速度・湯気の量・線の太さ・碗の形は調整できます）</p>
+</div>
+
+<script>
+"use strict";
+// 各パスの正確な長さを --len に設定（綺麗に描き上がる）
+function setLen(){
+  document.querySelectorAll('.cup').forEach(p=>{ const L=Math.ceil(p.getTotalLength())+2; p.style.setProperty('--len',L); p.style.strokeDasharray=L; });
+}
+if(document.readyState!=='loading') setLen(); else window.addEventListener('DOMContentLoaded',setLen);
+</script>
+</body>
+</html>

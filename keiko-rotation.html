@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<!--
+  席ぐるり — お稽古の席順（役割ローテーション）アプリ（3ステップ＋トップ＋編集＋PDF）
+  ====================================================================
+  ・トップ → ①メンバー選択 → ②組み方 → ③席順表（PDF保存）。スマホ最適化。
+  ・ロジック：N人＝N席、各自が亭主を1回ずつ。正客＝亭主のa個あと、詰め＝b個あと（巡回, a≈N/3,b≈2N/3）。
+    毎席3人は別人（重複なし）／各自が亭主・正客・詰めを1回ずつ（ラテン方格）／出番が均等に散り休憩が入る。
+  ・メンバーは固定の初期値＋編集（localStorage保存。静的ホスティングのため共有DBは無し＝端末ごと保存）。
+  ・PDFはブラウザ印刷（Save as PDF）。
+  ====================================================================
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>席ぐるり — お稽古の席順</title>
+<style>
+  :root{
+    --rose:#c98a96; --rose-deep:#9c5d69; --rose-soft:#efe1e4;
+    --bg:#f1ece9; --surface:#fffdfc; --surface-2:#f6efec;
+    --ink:#2b2421; --ink-soft:#857873; --faint:#aa9c96; --gold:#bfa14a;
+    --line:rgba(43,36,33,.12); --chip-bg:#f1e6e6;
+    --teishu:#9c5d69; --shokyaku:#5e6d44; --tsume:#7c6238;
+    --font:"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+    --font-head:"Hiragino Mincho ProN","Noto Serif JP",serif;
+    --radius:16px; --radius-s:11px;
+    --shadow:0 14px 34px rgba(80,45,55,.14); --shadow-s:0 5px 14px rgba(80,45,55,.08);
+    --ease:cubic-bezier(.4,.14,.2,1); --ease-out:cubic-bezier(.16,.84,.34,1);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{ margin:0; font-family:var(--font); color:var(--ink); background:#e7ddd8;
+    -webkit-font-smoothing:antialiased; }
+  button{ font-family:inherit; color:inherit; cursor:pointer; }
+  svg{ display:block; }
+
+  /* スマホ最適化：480px のカラムを中央に（PCでもスマホUI） */
+  .app{ position:relative; max-width:480px; margin:0 auto; min-height:100dvh; background:var(--bg);
+    background-image:
+      repeating-linear-gradient(60deg, rgba(156,93,105,.05) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(-60deg, rgba(156,93,105,.05) 0 1px, transparent 1px 22px);
+    box-shadow:0 0 60px rgba(0,0,0,.12); display:flex; flex-direction:column; overflow:hidden; }
+
+  .screen{ display:none; flex-direction:column; flex:1 1 auto; min-height:0; }
+  .screen.on{ display:flex; animation:fade .35s var(--ease-out) both; }
+  @keyframes fade{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+  .body{ flex:1 1 auto; overflow-y:auto; padding:18px 16px 16px; }
+  .actions{ flex:0 0 auto; display:flex; gap:10px; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--surface); border-top:1px solid var(--line); }
+  .actions .btn{ flex:1 1 auto; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--line); border-radius:99px; padding:14px 18px; background:var(--surface-2); font-size:15px; font-weight:700; letter-spacing:.04em; color:var(--ink); transition:.18s var(--ease); }
+  .btn:hover{ border-color:var(--rose); color:var(--rose-deep); }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn.primary{ background:linear-gradient(140deg,var(--rose),var(--rose-deep)); color:#fff; border-color:transparent; box-shadow:var(--shadow-s); }
+  .btn.primary:hover{ color:#fff; filter:brightness(1.04); }
+  .btn.ghost{ background:transparent; }
+  .btn.sm{ padding:9px 14px; font-size:13px; }
+
+  /* ===== トップ ===== */
+  #screen-top{ justify-content:center; align-items:center; text-align:center; padding:30px 22px; position:relative; overflow:hidden; }
+  #screen-top::before{ content:""; position:absolute; width:340px; height:340px; border-radius:50%; background:radial-gradient(circle at 40% 35%, var(--rose-soft), transparent 70%); top:-60px; right:-90px; animation:floaty 9s ease-in-out infinite alternate; }
+  #screen-top::after{ content:""; position:absolute; width:300px; height:300px; border-radius:50%; background:radial-gradient(circle at 60% 60%, rgba(191,161,74,.18), transparent 70%); bottom:-80px; left:-80px; animation:floaty 11s ease-in-out infinite alternate-reverse; }
+  @keyframes floaty{ from{ transform:translateY(0) scale(1);} to{ transform:translateY(18px) scale(1.06);} }
+  .top-inner{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .badge{ display:inline-flex; align-items:center; justify-content:center; width:96px; height:96px; border-radius:50%; background:linear-gradient(140deg,var(--rose),var(--rose-deep)); color:#fff; box-shadow:0 16px 34px rgba(156,93,105,.4); margin-bottom:14px; animation:pop .7s var(--ease-out) both; }
+  .badge svg{ width:52px; height:52px; animation:spin 16s linear infinite; }
+  @keyframes pop{ from{opacity:0; transform:scale(.6);} to{opacity:1; transform:scale(1);} }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  .title{ font-family:var(--font-head); font-size:40px; font-weight:700; letter-spacing:.1em; margin:4px 0 2px; animation:rise .6s var(--ease-out) both; animation-delay:.1s; }
+  .title-sub{ font-size:13px; color:var(--rose-deep); letter-spacing:.16em; font-weight:700; animation:rise .6s var(--ease-out) both; animation-delay:.18s; }
+  .title-desc{ font-size:13px; color:var(--ink-soft); line-height:1.8; margin:14px 0 26px; max-width:300px; animation:rise .6s var(--ease-out) both; animation-delay:.26s; }
+  @keyframes rise{ from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;} }
+  .top-btns{ display:flex; flex-direction:column; gap:11px; width:min(300px,100%); animation:rise .6s var(--ease-out) both; animation-delay:.34s; }
+  .top-btns .btn{ padding:16px; font-size:16px; }
+
+  /* ===== ステッパー ===== */
+  .stepper{ flex:0 0 auto; display:flex; align-items:center; gap:6px; padding:14px 16px 6px; }
+  .stepper .st{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .stepper .dot{ width:26px; height:26px; border-radius:50%; border:1.5px solid var(--line); background:var(--surface); color:var(--faint); font-size:12px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; transition:.2s; }
+  .stepper .lab{ font-size:10.5px; color:var(--faint); font-weight:700; letter-spacing:.04em; }
+  .stepper .st.done .dot{ background:var(--rose-soft); border-color:var(--rose); color:var(--rose-deep); }
+  .stepper .st.on .dot{ background:var(--rose); border-color:var(--rose); color:#fff; transform:scale(1.1); }
+  .stepper .st.on .lab{ color:var(--rose-deep); }
+  .stepper .bar{ flex:0 0 18px; height:2px; background:var(--line); margin-top:-16px; }
+  .h2{ font-family:var(--font-head); font-size:20px; font-weight:700; letter-spacing:.04em; margin:6px 0 3px; }
+  .lead{ font-size:12.5px; color:var(--ink-soft); line-height:1.7; margin:0 0 14px; }
+
+  /* メンバー選択 */
+  .toolbar{ display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+  .selpill{ font-size:12px; color:var(--ink-soft); } .selpill b{ color:var(--rose-deep); font-size:1.25em; font-family:var(--font-head); }
+  .mlist{ display:flex; flex-direction:column; gap:8px; }
+  .mcard{ display:flex; align-items:center; gap:12px; border:1.5px solid var(--line); border-radius:var(--radius-s); padding:11px 13px; background:var(--surface); transition:.16s var(--ease); }
+  .mcard:hover{ border-color:var(--rose); }
+  .mcard.on{ border-color:var(--rose); background:linear-gradient(140deg,#fff,var(--rose-soft)); }
+  .mcard .chk{ flex:0 0 auto; width:24px; height:24px; border-radius:50%; border:1.5px solid var(--faint); display:inline-flex; align-items:center; justify-content:center; transition:.16s; }
+  .mcard.on .chk{ background:var(--rose); border-color:var(--rose); }
+  .mcard .chk svg{ width:15px; height:15px; color:#fff; opacity:0; } .mcard.on .chk svg{ opacity:1; }
+  .mcard .info{ flex:1 1 auto; min-width:0; }
+  .mcard .nm{ font-size:15px; font-weight:700; }
+  .mcard .yr{ font-size:11.5px; color:var(--ink-soft); } .mcard .yr b{ color:var(--rose-deep); }
+  .mcard .rank{ flex:0 0 auto; font-size:10px; color:var(--faint); font-weight:700; }
+
+  /* 組み方 */
+  .modes{ display:flex; flex-direction:column; gap:9px; }
+  .mode{ display:flex; align-items:flex-start; gap:11px; border:1.5px solid var(--line); border-radius:var(--radius-s); background:var(--surface); padding:13px 14px; text-align:left; transition:.16s var(--ease); }
+  .mode:hover{ border-color:var(--rose); }
+  .mode.on{ border-color:var(--rose); background:linear-gradient(140deg,#fff,var(--rose-soft)); box-shadow:0 0 0 2px var(--rose-soft) inset; }
+  .mode .em{ font-size:22px; line-height:1; }
+  .mode .mh{ font-size:15px; font-weight:800; } .mode .md{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; line-height:1.5; }
+  .mode-ctrl{ margin-top:14px; }
+  .seg{ display:inline-flex; border:1px solid var(--line); border-radius:99px; overflow:hidden; }
+  .seg button{ padding:8px 15px; font-size:12.5px; font-weight:700; background:var(--surface-2); border:0; color:var(--ink-soft); }
+  .seg button.on{ background:var(--rose); color:#fff; }
+  .manual-list{ display:flex; flex-direction:column; gap:7px; margin-top:4px; }
+  .mrow{ display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:var(--radius-s); padding:9px 11px; background:var(--surface); }
+  .mrow .pos{ flex:0 0 auto; width:24px; height:24px; border-radius:50%; background:var(--rose-soft); color:var(--rose-deep); font-size:11px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; }
+  .mrow .mn{ flex:1 1 auto; font-size:14px; font-weight:700; } .mrow .my{ font-size:11px; color:var(--ink-soft); }
+  .mrow .ud{ display:flex; gap:6px; }
+  .mrow .ud button{ width:34px; height:34px; border:1px solid var(--line); border-radius:9px; background:var(--surface-2); font-size:14px; }
+  .mrow .ud button:disabled{ opacity:.3; }
+
+  /* 結果 */
+  .legend{ display:flex; gap:12px; font-size:11px; color:var(--ink-soft); flex-wrap:wrap; margin-bottom:12px; }
+  .legend span{ display:inline-flex; align-items:center; gap:5px; } .legend i{ width:10px; height:10px; border-radius:50%; }
+  .i-teishu{ background:var(--teishu);} .i-shokyaku{ background:var(--shokyaku);} .i-tsume{ background:var(--tsume);}
+  .res-date{ font-size:11.5px; color:var(--ink-soft); margin-bottom:10px; }
+  .tbl{ width:100%; border-collapse:separate; border-spacing:0 8px; }
+  .tbl .row{ display:grid; grid-template-columns:48px 1fr 1fr 1fr; gap:6px; align-items:center; }
+  .tbl .rhead{ font-size:10.5px; color:var(--ink-soft); font-weight:800; letter-spacing:.06em; padding:0 4px; }
+  .tbl .rhead div{ text-align:center; } .tbl .rhead .seki{ text-align:left; }
+  .card-row{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-s); padding:8px 6px; box-shadow:var(--shadow-s); }
+  .seki{ font-family:var(--font-head); font-weight:700; font-size:15px; padding-left:6px; }
+  .pill{ display:flex; flex-direction:column; align-items:center; gap:1px; border-radius:9px; padding:7px 4px; font-size:14px; font-weight:700; }
+  .pill .yy{ font-size:9.5px; font-weight:600; opacity:.72; }
+  .pill.teishu{ background:rgba(156,93,105,.12); color:var(--teishu); }
+  .pill.shokyaku{ background:rgba(94,109,68,.14); color:var(--shokyaku); }
+  .pill.tsume{ background:rgba(124,98,56,.15); color:var(--tsume); }
+  .rest{ grid-column:1 / -1; font-size:11px; color:var(--faint); padding:4px 6px 1px; }
+  .rest b{ color:var(--ink-soft); font-weight:600; }
+  .note{ font-size:11.5px; color:var(--ink-soft); margin-top:14px; line-height:1.7; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius-s); padding:11px 13px; } .note b{ color:var(--rose-deep); }
+  .err{ color:#b3322f; font-size:13px; font-weight:700; margin-top:10px; }
+
+  /* 編集 */
+  .erow{ display:flex; align-items:center; gap:9px; border:1px solid var(--line); border-radius:var(--radius-s); padding:8px 10px; background:var(--surface); margin-bottom:8px; }
+  .erow input{ font:inherit; border:1px solid var(--line); border-radius:8px; padding:8px 10px; background:var(--surface-2); color:var(--ink); min-width:0; }
+  .erow input.en{ flex:1 1 auto; } .erow input.ey{ width:78px; }
+  .erow input:focus{ outline:none; border-color:var(--rose); }
+  .erow .del{ flex:0 0 auto; width:34px; height:34px; border:1px solid var(--line); border-radius:8px; background:var(--surface-2); color:var(--rose-deep); font-size:16px; }
+  .addnew{ display:flex; gap:8px; margin-top:6px; }
+  .addnew input{ font:inherit; border:1px solid var(--line); border-radius:8px; padding:10px 11px; background:var(--surface-2); }
+  .addnew input.en{ flex:1 1 auto; min-width:0; } .addnew input.ey{ width:90px; }
+
+  /* 印刷（PDF保存） */
+  #print-head{ display:none; }
+  @media print{
+    body{ background:#fff; } .app{ max-width:none; box-shadow:none; background:#fff; }
+    .stepper,.actions,.legend,.note,.toolbar{ display:none!important; }
+    .screen{ display:none!important; } #screen-3.on{ display:block!important; }
+    #screen-3 .body{ overflow:visible; padding:0; }
+    #print-head{ display:block; text-align:center; margin-bottom:12px; }
+    #print-head h1{ font-family:var(--font-head); font-size:20px; margin:0; }
+    #print-head p{ font-size:12px; color:#555; margin:4px 0 0; }
+    .card-row{ break-inside:avoid; box-shadow:none; }
+  }
+  @media (prefers-reduced-motion:reduce){ *{ animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-cup" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h13v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M7 6c0-1 1-1 1-2M11 6c0-1 1-1 1-2M15 6c0-1 1-1 1-2"/></g></symbol>
+</defs></svg>
+
+<div class="app" id="app">
+
+  <!-- ===== トップ ===== -->
+  <section class="screen on" id="screen-top">
+    <div class="top-inner">
+      <span class="badge" aria-hidden="true"><svg><use href="#i-cup"/></svg></span>
+      <div class="title">席ぐるり</div>
+      <div class="title-sub">お稽古の席順メーカー</div>
+      <div class="title-desc">参加する人を選んでタップするだけ。<br>亭主・正客・詰めが重ならず、休憩を挟んで<br>ぐるりと回る席順を作ります。</div>
+      <div class="top-btns">
+        <button class="btn primary" id="startBtn" type="button">▶ 始める</button>
+        <button class="btn ghost" id="helpBtn" type="button">？ 説明を見る</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 説明 ===== -->
+  <section class="screen" id="screen-help">
+    <div class="body">
+      <div class="h2">このアプリについて</div>
+      <p class="lead">お稽古で全員が順番に〈亭主・正客・詰め〉を務められるよう、重複なく・休憩を挟んだ席順を自動で作ります。</p>
+      <div class="note" style="margin-top:0">
+        <b>3つの役割</b><br>・<b>亭主</b>…お点前をする人<br>・<b>正客</b>…主賓（最初にいただく）<br>・<b>詰め</b>…末客（最後の客）<br><br>
+        <b>仕組み</b><br>参加 N 人＝N 席。各自が亭主を1回ずつ。正客・詰めは亭主から一定間隔うしろの人を自動で割り当て、<b>誰も役が重ならず</b>・<b>出番の合間に休憩</b>が入るようにします（お控えの人は次の出番までゆっくり）。<br><br>
+        <b>順番の決め方</b>は「ランダム／年功序列／手動」から選べます。
+      </div>
+    </div>
+    <div class="actions"><button class="btn" id="helpBack" type="button">← 戻る</button></div>
+  </section>
+
+  <!-- ===== ① メンバー ===== -->
+  <section class="screen" id="screen-1">
+    <div class="stepper" id="stepper1"></div>
+    <div class="body">
+      <div class="h2">① 参加メンバーを選ぶ</div>
+      <p class="lead">今回お稽古に参加する人をタップで選択してください。</p>
+      <div class="toolbar">
+        <span class="selpill">参加 <b id="selCount">0</b> 名（＝<span id="sekiCount">0</span> 席）</span>
+        <span style="flex:1"></span>
+        <button class="btn sm ghost" id="allBtn" type="button">全員</button>
+        <button class="btn sm ghost" id="noneBtn" type="button">解除</button>
+        <button class="btn sm" id="editBtn" type="button">✎ 編集</button>
+      </div>
+      <div class="mlist" id="mlist"></div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="toTop" type="button" style="flex:0 0 auto">← トップ</button>
+      <button class="btn primary" id="to2" type="button">次へ →</button>
+    </div>
+  </section>
+
+  <!-- ===== ② 組み方 ===== -->
+  <section class="screen" id="screen-2">
+    <div class="stepper" id="stepper2"></div>
+    <div class="body">
+      <div class="h2">② 順番の決め方</div>
+      <p class="lead">亭主（お点前をする人）の並びを決めます。正客・詰め・休憩は自動です。</p>
+      <div class="modes" id="modes">
+        <button class="mode on" data-mode="random" type="button"><span class="em">🎲</span><span><span class="mh">ランダム</span><span class="md">公平にシャッフル。気軽な稽古に。</span></span></button>
+        <button class="mode" data-mode="senior" type="button"><span class="em">🏵</span><span><span class="mh">年功序列</span><span class="md">茶歴順に。最初を先輩から。</span></span></button>
+        <button class="mode" data-mode="manual" type="button"><span class="em">✋</span><span><span class="mh">手動</span><span class="md">▲▼で自分で並べ替え。</span></span></button>
+      </div>
+      <div class="mode-ctrl" id="modeCtrl"></div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="back1" type="button" style="flex:0 0 auto">← 戻る</button>
+      <button class="btn primary" id="genBtn" type="button">席順を作成する</button>
+    </div>
+  </section>
+
+  <!-- ===== ③ 結果 ===== -->
+  <section class="screen" id="screen-3">
+    <div class="stepper" id="stepper3"></div>
+    <div class="body">
+      <div id="print-head"><h1>お稽古 席順表</h1><p id="printDate"></p></div>
+      <div class="h2" id="resTitle">席順表</div>
+      <div class="res-date" id="resDate"></div>
+      <div class="legend">
+        <span><i class="i-teishu"></i>亭主＝お点前</span>
+        <span><i class="i-shokyaku"></i>正客＝主賓</span>
+        <span><i class="i-tsume"></i>詰め＝末客</span>
+      </div>
+      <div class="err" id="err" style="display:none"></div>
+      <div class="tbl" id="tbl">
+        <div class="row rhead"><div class="seki">席</div><div>亭主</div><div>正客</div><div>詰め</div></div>
+        <div id="rows"></div>
+      </div>
+      <div class="note" id="note"></div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="back2" type="button" style="flex:0 0 auto">← 戻る</button>
+      <button class="btn" id="pdfBtn" type="button">📄 PDF保存</button>
+      <button class="btn ghost" id="restartBtn" type="button" style="flex:0 0 auto">最初から</button>
+    </div>
+  </section>
+
+  <!-- ===== 編集 ===== -->
+  <section class="screen" id="screen-edit">
+    <div class="body">
+      <div class="h2">メンバーを編集</div>
+      <p class="lead">名前・茶歴の変更、追加・削除ができます。変更はこの端末に保存されます。</p>
+      <div id="elist"></div>
+      <div class="addnew">
+        <input class="en" id="newName" type="text" placeholder="名前（例：橋間 渚）" maxlength="16">
+        <input class="ey" id="newYears" type="number" placeholder="茶歴" min="0" max="80">
+        <button class="btn sm primary" id="addBtn" type="button" style="flex:0 0 auto">＋追加</button>
+      </div>
+      <button class="btn ghost sm" id="resetBtn" type="button" style="margin-top:14px">初期メンバーに戻す</button>
+    </div>
+    <div class="actions"><button class="btn primary" id="editDone" type="button">保存して戻る</button></div>
+  </section>
+</div>
+
+<script>
+"use strict";
+(function(){
+  const $=id=>document.getElementById(id);
+  const KANJI=['','初','二','三','四','五','六','七','八','九','十'];
+  const sekiLabel=i=>(i<=10?KANJI[i]+'席':i+'席');
+  const sei=n=>String(n).trim().split(/[ 　]/)[0];
+
+  // 初期メンバー（聞き取り再構成・要確認／attend=今回の出欠の既定）
+  const DEFAULTS=[
+    {name:'橋間 渚',years:12,attend:true},
+    {name:'岩村 東正',years:12,attend:true},
+    {name:'酒井 直子',years:12,attend:false},
+    {name:'久保 恵子',years:10,attend:true},
+    {name:'山田 千春',years:9,attend:true},
+    {name:'大鳥 眞弓',years:6,attend:true},
+    {name:'藤本 勝重',years:6,attend:true},
+    {name:'西川 矢右衛門',years:5,attend:false},
+    {name:'河合 悦子',years:4,attend:true},
+    {name:'光善坊 久司',years:4,attend:true},
+    {name:'白川 涼音',years:3,attend:false},
+    {name:'浜上 優子',years:3,attend:false},
+    {name:'金村 実香',years:2,attend:false},
+    {name:'天野 汰一',years:1,attend:true}
+  ];
+  const LS='sekiguri.roster.v1';
+  let MEMBERS=load(), nextId=0;
+  function load(){
+    try{ const r=JSON.parse(localStorage.getItem(LS)); if(Array.isArray(r)&&r.length) return r.map(m=>({id:++nextId,...m})); }catch(e){}
+    return DEFAULTS.map(m=>({id:++nextId,...m}));
+  }
+  function save(){ try{ localStorage.setItem(LS, JSON.stringify(MEMBERS.map(({name,years,attend})=>({name,years,attend:!!attend})))); }catch(e){} }
+  const byId=()=>{ const o={}; MEMBERS.forEach(m=>o[m.id]=m); return o; };
+
+  let selected=new Set(MEMBERS.filter(m=>m.attend).map(m=>m.id));
+  let mode='random', seniorDesc=true, manualOrder=[], lastShuffle=null;
+
+  /* ===== 画面遷移 ===== */
+  function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); $('app').scrollTop=0; const b=document.querySelector('#'+id+' .body'); if(b) b.scrollTop=0; }
+  function stepper(stage){
+    const steps=[['1','メンバー'],['2','組み方'],['3','席順']];
+    return steps.map((s,i)=>{
+      const cls = i+1<stage?'done':(i+1===stage?'on':'');
+      return (i?'<div class="bar"></div>':'')+'<div class="st '+cls+'"><span class="dot">'+s[0]+'</span><span class="lab">'+s[1]+'</span></div>';
+    }).join('');
+  }
+  $('stepper1').innerHTML=stepper(1); $('stepper2').innerHTML=stepper(2); $('stepper3').innerHTML=stepper(3);
+
+  $('startBtn').onclick=()=>{ renderMembers(); show('screen-1'); };
+  $('helpBtn').onclick=()=>show('screen-help');
+  $('helpBack').onclick=()=>show('screen-top');
+  $('toTop').onclick=()=>show('screen-top');
+  $('to2').onclick=()=>{ if(selected.size<3){ flash($('to2'),'3人以上選んでください'); return; } renderModeCtrl(); show('screen-2'); };
+  $('back1').onclick=()=>show('screen-1');
+  $('back2').onclick=()=>show('screen-2');
+  $('genBtn').onclick=()=>{ build(); show('screen-3'); };
+  $('restartBtn').onclick=()=>show('screen-top');
+  function flash(btn,msg){ const o=btn.textContent; btn.textContent=msg; btn.disabled=true; setTimeout(()=>{btn.textContent=o; btn.disabled=false;},1300); }
+
+  /* ===== ① メンバー ===== */
+  function renderMembers(){
+    const sorted=[...MEMBERS].sort((a,b)=>b.years-a.years||a.id-b.id);
+    const list=$('mlist'); list.innerHTML='';
+    sorted.forEach((m,i)=>{
+      const on=selected.has(m.id);
+      const c=document.createElement('div'); c.className='mcard'+(on?' on':'');
+      c.innerHTML='<span class="chk"><svg><use href="#i-check"/></svg></span>'
+        +'<span class="info"><span class="nm">'+m.name+'</span> <span class="yr">茶歴<b>'+m.years+'</b>年</span></span>'
+        +'<span class="rank">'+(i===0?'最古参':'')+'</span>';
+      c.onclick=()=>{ if(selected.has(m.id))selected.delete(m.id); else selected.add(m.id); syncManual(); renderMembers(); };
+      list.appendChild(c);
+    });
+    $('selCount').textContent=selected.size; $('sekiCount').textContent=selected.size;
+  }
+  $('allBtn').onclick=()=>{ MEMBERS.forEach(m=>selected.add(m.id)); syncManual(); renderMembers(); };
+  $('noneBtn').onclick=()=>{ selected.clear(); syncManual(); renderMembers(); };
+  $('editBtn').onclick=()=>{ renderEdit(); show('screen-edit'); };
+
+  function syncManual(){ manualOrder=manualOrder.filter(id=>selected.has(id)); MEMBERS.forEach(m=>{ if(selected.has(m.id)&&!manualOrder.includes(m.id)) manualOrder.push(m.id); }); }
+
+  /* ===== ② 組み方 ===== */
+  $('modes').querySelectorAll('.mode').forEach(b=>b.onclick=()=>{ mode=b.dataset.mode; $('modes').querySelectorAll('.mode').forEach(x=>x.classList.toggle('on',x===b)); renderModeCtrl(); });
+  function renderModeCtrl(){
+    const c=$('modeCtrl'); c.innerHTML='';
+    if(mode==='random'){
+      c.innerHTML='<button class="btn sm" id="shuffleBtn" type="button">🎲 シャッフルし直す</button>';
+      $('shuffleBtn').onclick=()=>{ lastShuffle=null; flash($('shuffleBtn'),'✓ 次の作成で反映'); };
+    }else if(mode==='senior'){
+      c.innerHTML='<div class="seg"><button data-d="1" class="'+(seniorDesc?'on':'')+'">先輩を先頭</button><button data-d="0" class="'+(!seniorDesc?'on':'')+'">後輩を先頭</button></div>';
+      c.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{ seniorDesc=b.dataset.d==='1'; renderModeCtrl(); });
+    }else{
+      syncManual(); const o=byId(); const wrap=document.createElement('div'); wrap.className='manual-list';
+      manualOrder.forEach((id,i)=>{ const m=o[id]; if(!m)return; const r=document.createElement('div'); r.className='mrow';
+        r.innerHTML='<span class="pos">'+(i+1)+'</span><span class="mn">'+m.name+'</span><span class="my">茶歴'+m.years+'年</span>'
+          +'<span class="ud"><button data-up="'+i+'" '+(i===0?'disabled':'')+'>▲</button><button data-down="'+i+'" '+(i===manualOrder.length-1?'disabled':'')+'>▼</button></span>';
+        wrap.appendChild(r); });
+      c.appendChild(wrap);
+      wrap.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>mv(+b.dataset.up,-1));
+      wrap.querySelectorAll('[data-down]').forEach(b=>b.onclick=()=>mv(+b.dataset.down,1));
+    }
+  }
+  function mv(i,d){ const j=i+d; if(j<0||j>=manualOrder.length)return; [manualOrder[i],manualOrder[j]]=[manualOrder[j],manualOrder[i]]; renderModeCtrl(); }
+
+  /* ===== 生成 ===== */
+  function shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  function buildOrder(){
+    const o=byId(); const list=MEMBERS.filter(m=>selected.has(m.id));
+    if(mode==='random'){ if(!lastShuffle||lastShuffle.length!==list.length||!lastShuffle.every(id=>selected.has(id))) lastShuffle=shuffle(list).map(m=>m.id); return lastShuffle.map(id=>o[id]).filter(Boolean); }
+    if(mode==='senior') return [...list].sort((a,b)=>seniorDesc?(b.years-a.years)||a.id-b.id:(a.years-b.years)||a.id-b.id);
+    syncManual(); return manualOrder.map(id=>o[id]).filter(Boolean);
+  }
+  function offsets(n){ let a=Math.max(1,Math.round(n/3)); let b=Math.round(2*n/3); if(b>=n)b=n-1; if(b<=a)b=a+1; if(b>=n){b=n-1; if(a>=b)a=b-1;} if(a<1)a=1; return [a,b]; }
+
+  function build(){
+    $('err').style.display='none';
+    const ord=buildOrder(), n=ord.length;
+    if(n<3){ $('err').textContent='3人以上を選んでください。'; $('err').style.display='block'; $('rows').innerHTML=''; return; }
+    const [a,b]=offsets(n); const rows=$('rows'); rows.innerHTML='';
+    for(let r=0;r<n;r++){
+      const t=ord[r], s=ord[(r+a)%n], d=ord[(r+b)%n];
+      const active=new Set([t.id,s.id,d.id]); const rest=ord.filter(m=>!active.has(m.id)).map(m=>sei(m.name));
+      const div=document.createElement('div'); div.className='card-row';
+      div.innerHTML='<div class="row">'
+        +'<div class="seki">'+sekiLabel(r+1)+'</div>'
+        +'<div class="pill teishu">'+sei(t.name)+'<span class="yy">'+t.years+'年</span></div>'
+        +'<div class="pill shokyaku">'+sei(s.name)+'<span class="yy">'+s.years+'年</span></div>'
+        +'<div class="pill tsume">'+sei(d.name)+'<span class="yy">'+d.years+'年</span></div>'
+        +(rest.length?'<div class="rest">お控え：<b>'+rest.join('・')+'</b></div>':'')
+        +'</div>';
+      rows.appendChild(div);
+    }
+    const dt=new Date(); const ds=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日';
+    $('resTitle').textContent='席順表（全 '+n+' 席）'; $('resDate').textContent=ds+'／参加 '+n+' 名';
+    $('printDate').textContent=ds+'　参加 '+n+' 名';
+    $('note').innerHTML='<b>仕組み</b>：各自が〈亭主・正客・詰め〉を<b>1回ずつ</b>（重複なし）。正客＝亭主の'+a+'つあと、詰め＝'+b+'つあと（巡回）で、出番が均等に散り<b>間に休憩</b>が入ります。';
+  }
+  $('pdfBtn').onclick=()=>window.print();
+
+  /* ===== 編集 ===== */
+  function renderEdit(){
+    const list=$('elist'); list.innerHTML='';
+    [...MEMBERS].sort((a,b)=>b.years-a.years||a.id-b.id).forEach(m=>{
+      const r=document.createElement('div'); r.className='erow';
+      r.innerHTML='<input class="en" value="'+m.name.replace(/"/g,'&quot;')+'"><input class="ey" type="number" min="0" max="80" value="'+m.years+'"><button class="del" title="削除">×</button>';
+      const [ni,yi,del]=[r.querySelector('.en'),r.querySelector('.ey'),r.querySelector('.del')];
+      ni.oninput=()=>{ m.name=ni.value; };
+      yi.oninput=()=>{ m.years=Math.max(0,parseInt(yi.value,10)||0); };
+      del.onclick=()=>{ MEMBERS=MEMBERS.filter(x=>x.id!==m.id); selected.delete(m.id); renderEdit(); };
+      list.appendChild(r);
+    });
+  }
+  $('addBtn').onclick=()=>{ const n=$('newName').value.trim(); const y=parseInt($('newYears').value,10);
+    if(!n){ $('newName').focus(); return; } MEMBERS.push({id:++nextId,name:n,years:isNaN(y)?0:y,attend:true}); selected.add(nextId);
+    $('newName').value=''; $('newYears').value=''; renderEdit(); };
+  $('resetBtn').onclick=()=>{ if(!confirm('初期メンバーに戻しますか？（この端末の編集内容は消えます）'))return; MEMBERS=DEFAULTS.map(m=>({id:++nextId,...m})); selected=new Set(MEMBERS.filter(m=>m.attend).map(m=>m.id)); renderEdit(); };
+  $('editDone').onclick=()=>{ MEMBERS=MEMBERS.filter(m=>String(m.name).trim()); save(); syncManual(); renderMembers(); show('screen-1'); };
+
+  renderMembers();
+})();
+</script>
+</body>
+</html>
