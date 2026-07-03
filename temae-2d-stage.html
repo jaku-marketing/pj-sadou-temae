@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>茶道お手前 2Dパーツ合成ステージ（プロトタイプ）</title>
+<style>
+  :root{
+    --nama: #f5efe0;   /* 生成り */
+    --nama-deep: #e9dfc6;
+    --matcha: #5C8F2B; /* 抹茶 */
+    --matcha-deep: #446b1f;
+    --sumi: #33291f;   /* 墨 */
+    --line: #cbbfa0;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0;
+    background: var(--nama-deep);
+    color: var(--sumi);
+    font-family: "Hiragino Mincho ProN","YuMincho","游明朝",serif;
+  }
+  #app{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:100vh;
+    padding: 16px 12px 40px;
+  }
+  h1{
+    font-size: 18px;
+    letter-spacing: .08em;
+    margin: 4px 0 12px;
+    color: var(--sumi);
+  }
+  h1 small{
+    display:block;
+    font-size: 11px;
+    color:#7a6f5a;
+    margin-top:4px;
+    letter-spacing:.05em;
+  }
+
+  /* ---------- コントロールパネル ---------- */
+  .panel{
+    width: 100%;
+    max-width: 1040px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    justify-content:center;
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    background: var(--nama);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .panel .group{
+    display:flex;
+    gap:6px;
+    align-items:center;
+    padding: 4px 8px;
+    border-right: 1px solid var(--line);
+  }
+  .panel .group:last-child{ border-right:none; }
+  .panel label.tag{
+    font-size:11px;
+    color:#7a6f5a;
+    margin-right:2px;
+    white-space:nowrap;
+  }
+  button{
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--matcha);
+    background: #fff;
+    color: var(--matcha-deep);
+    cursor:pointer;
+    transition: all .15s ease;
+    white-space:nowrap;
+  }
+  button:hover{ background: #eef5e6; }
+  button.active{
+    background: var(--matcha);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(92,143,43,.35);
+  }
+  button.demo{
+    border-color:#a8763a;
+    color:#8a5a22;
+  }
+  button.demo:hover{ background:#fbf1e2; }
+  button.demo.active{
+    background:#a8763a;
+    color:#fff;
+  }
+  .toggle-wrap{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:13px;
+  }
+  input[type=range]{ width:110px; vertical-align:middle; }
+
+  /* ---------- ステージ ---------- */
+  #stage-outer{
+    width: 100%;
+    max-width: 1040px;
+    aspect-ratio: 1600 / 912;
+    position: relative;
+    overflow:hidden;
+    background:#000;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    border: 6px solid #7a6a4f;
+  }
+  #stage{
+    position:absolute;
+    top:0; left:0;
+    width:1600px;
+    height:912px;
+    transform-origin: top left;
+    overflow:hidden; /* kensui見切れクリップ */
+  }
+  #stage .layer{
+    position:absolute;
+    top:0; left:0;
+    transform-origin: 0 0;
+    pointer-events:none;
+    user-select:none;
+    -webkit-user-drag:none;
+  }
+  #stage .layer.bg{
+    width:1600px;
+    height:912px;
+  }
+  #stage .layer.anim{
+    transition: transform 1.4s cubic-bezier(.4,.05,.2,1);
+  }
+  #overlay-orig{
+    position:absolute;
+    top:0; left:0;
+    width:1600px;
+    height:912px;
+    opacity: 0;
+    pointer-events:none;
+    z-index: 999;
+  }
+
+  footer{
+    max-width: 1040px;
+    width:100%;
+    margin-top: 16px;
+    font-size: 12px;
+    line-height:1.7;
+    color:#6b6152;
+  }
+  footer b{ color: var(--matcha-deep); }
+  code{
+    background:#eee3cc;
+    padding:1px 5px;
+    border-radius:4px;
+    font-size:11px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <h1>茶道お手前 ― 2Dパーツ合成ステージ
+    <small>Canva書き出しパーツ30点 ×原本イラスト座標合わせ／プロトタイプ</small>
+  </h1>
+
+  <div class="panel">
+    <div class="group">
+      <span class="tag">シーン</span>
+      <button data-scene="A" class="scene-btn">A：風炉釜のみ（n1）</button>
+      <button data-scene="B" class="scene-btn">B：道具出揃い（n16相当）</button>
+      <button data-scene="C" class="scene-btn">C：釜蓋を蓋置へ（n18相当）</button>
+    </div>
+    <div class="group">
+      <span class="tag">動きデモ</span>
+      <button data-demo="kamabuta" class="demo-btn demo">釜蓋を開ける ▶</button>
+      <button data-demo="natsume" class="demo-btn demo">棗の蓋を開ける ▶</button>
+    </div>
+    <div class="group" style="border-right:none;">
+      <span class="tag">比較モード</span>
+      <div class="toggle-wrap">
+        <input type="checkbox" id="compareToggle">
+        <label for="compareToggle">原本を重ねる</label>
+        <input type="range" id="compareOpacity" min="0" max="100" value="50">
+        <span id="compareOpacityLabel" style="font-size:11px;color:#7a6f5a;">50%</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="stage-outer">
+    <div id="stage">
+      <img class="layer bg" src="parts/bg_01_tatami.png" alt="背景">
+      <div id="parts-root"></div>
+      <img id="overlay-orig" src="img/3.png" alt="原本比較オーバーレイ">
+    </div>
+  </div>
+
+  <footer>
+    <p><b>使い方</b>：上部「シーン」ボタンでA/B/Cを切替。「動きデモ」は現在の背景構図の上でパーツをアニメーション移動（1.4秒）。「比較モード」にチェックすると原本 img/3・16・18.png をスライダーの不透明度でステージに重ねられます（シーンに応じて自動で原本を切替）。ズレがあれば <code>PLACEMENTS</code> 内の該当パーツの x / y / scale / rotate を書き換えて微調整してください。</p>
+  </footer>
+
+</div>
+
+<script>
+/* =========================================================================
+   PLACEMENTS
+   ---------------------------------------------------------------------
+   各シーンはパーツ配置の配列。1600×912の原本イラスト座標系を基準に、
+   x,y = パーツ画像(canvas)の(0,0)をステージ上のどこに置くか（translate値）
+   scale = 等倍拡大率
+   rotate = 度数（時計回りが正）
+   z = 重なり順
+   実測方法：parts/_verify/VERIFY_REPORT.md のアルファbboxと、
+   img/3・16・18.png を背景差分（bg_01_tatami.pngとの差分）で計測した
+   オブジェクトbboxから「アルファbbox → 目標bbox」のアフィン変換を算出。
+   斜め姿勢のパーツ（柄杓・巨大茶杓ヒーロー）は2点対応の剛体変換で
+   scale/rotateを解いている。
+   ========================================================================= */
+const PLACEMENTS = {
+
+  // シーンA = img/3.png（風炉釜だけの初期舞台）
+  sceneA: [
+    { part:'furogama_01.png', x:222.29, y:-20.42, scale:0.55388, rotate:0, z:10 },
+  ],
+
+  // シーンB = img/16.png 相当（道具が出揃った場面）
+  sceneB: [
+    { part:'furogama_01.png',        x:222.29, y:-20.42, scale:0.55388, rotate:0,     z:10 },
+    { part:'futaoki_01.png',         x:108,    y:446,    scale:0.27,    rotate:0,     z:12 },
+    { part:'hishaku_01.png',         x:8,      y:352,    scale:0.792,   rotate:-12.4, z:14 },
+    { part:'mizusashi_01.png',       x:828.7,  y:175.25, scale:0.603,   rotate:0,     z:20 },
+    { part:'natsume_01_chasyaku.png',x:888.8,  y:494.2,  scale:0.415,   rotate:0,     z:21 },
+    { part:'chasen_01.png.png',      x:1065,   y:537,    scale:0.34,    rotate:0,     z:22 },
+    { part:'chawan_02_empty.png',    x:664.7,  y:556.9,  scale:0.447,   rotate:0,     z:25 },
+    { part:'kensui_02_empty.png',    x:-127.6, y:521.5,  scale:0.657,   rotate:0,     z:30 },
+  ],
+
+  // シーンC = img/18.png 相当（釜蓋を蓋置に置いた場面）
+  sceneC: [
+    { part:'furogama_02.png',        x:224.94, y:-20.73, scale:0.55151, rotate:0,     z:10 },
+    { part:'futaoki_01.png',         x:108,    y:446,    scale:0.27,     rotate:0,     z:12 },
+    { part:'furogama_02_futa.png',   x:34.4,   y:423,    scale:0.585,   rotate:0,     z:13 },
+    { part:'mizusashi_01.png',       x:828.7,  y:175.25, scale:0.603,   rotate:0,     z:20 },
+    { part:'natsume_01_chasyaku.png',x:888.8,  y:494.2,  scale:0.415,   rotate:0,     z:21 },
+    { part:'chasen_01.png.png',      x:1065,   y:537,    scale:0.34,    rotate:0,     z:22 },
+    { part:'chawan_02_empty.png',    x:664.7,  y:548.9,  scale:0.447,   rotate:0,     z:25 },
+    { part:'chashaku_02_empty.png',  x:491.8,  y:397.1,  scale:0.618,   rotate:-53.0, z:26 },
+    { part:'kensui_02_empty.png',    x:-127.6, y:521.5,  scale:0.657,   rotate:0,     z:30 },
+  ],
+
+  // 動きデモ1：釜蓋を開ける（シーンCの構図を土台に、kamabutaだけアニメ）
+  demoKamabuta: {
+    base: [
+      { part:'furogama_02.png',        x:224.94, y:-20.73, scale:0.55151, rotate:0, z:10 },
+      { part:'futaoki_01.png',         x:108,    y:446,    scale:0.27,     rotate:0, z:12 },
+      { part:'mizusashi_01.png',       x:828.7,  y:175.25, scale:0.603,   rotate:0, z:20 },
+      { part:'natsume_01_chasyaku.png',x:888.8,  y:494.2,  scale:0.415,   rotate:0, z:21 },
+      { part:'chasen_01.png.png',      x:1065,   y:537,    scale:0.34,    rotate:0, z:22 },
+      { part:'chawan_02_empty.png',    x:664.7,  y:548.9,  scale:0.447,   rotate:0, z:25 },
+      { part:'kensui_02_empty.png',    x:-127.6, y:521.5,  scale:0.657,   rotate:0, z:30 },
+    ],
+    moving: {
+      part:'furogama_02_futa.png', z:15,
+      start:{ x:330.45, y:19.6,  scale:0.585, rotate:0  },  // 釜口の上
+      end:  { x:34.4,   y:423,   scale:0.585, rotate:18 },  // 蓋置の上
+    }
+  },
+
+  // 動きデモ2：棗の蓋を開ける（natsume_02→natsume_03_cha が下に隠れていて、
+  // futaがどくと見える構造）
+  demoNatsume: {
+    base: [
+      { part:'furogama_01.png',   x:222.29, y:-20.42, scale:0.55388, rotate:0, z:10 },
+      { part:'futaoki_01.png',    x:108,    y:446,    scale:0.27,     rotate:0, z:12 },
+      { part:'hishaku_01.png',    x:8,      y:352,    scale:0.792,   rotate:-12.4, z:14 },
+      { part:'mizusashi_01.png',  x:828.7,  y:175.25, scale:0.603,   rotate:0, z:20 },
+      { part:'chasen_01.png.png', x:1065,   y:537,    scale:0.34,    rotate:0, z:22 },
+      { part:'chawan_02_empty.png',x:664.7, y:556.9,  scale:0.447,   rotate:0, z:25 },
+      { part:'kensui_02_empty.png',x:-127.6,y:521.5,  scale:0.657,   rotate:0, z:30 },
+    ],
+    // 開いた状態の中身（フタの下に常時存在。フタが退くと見える）
+    revealed:{ part:'natsume_03_cha.png', x:888.8, y:494.2, scale:0.415, rotate:0, z:20.5 },
+    moving: {
+      part:'natsume_03_futa.png', z:23,
+      start:{ x:888.8, y:440,   scale:0.415, rotate:0  },  // 棗の上＝閉
+      end:  { x:888.8, y:494.2, scale:0.415, rotate:22 },  // ずらして開く
+    }
+  }
+};
+
+/* ========================================================================= */
+
+const partsRoot = document.getElementById('parts-root');
+const stage = document.getElementById('stage');
+const stageOuter = document.getElementById('stage-outer');
+const overlayOrig = document.getElementById('overlay-orig');
+
+const ORIG_IMG = { A:'img/3.png', B:'img/16.png', C:'img/18.png', demoKamabuta:'img/18.png', demoNatsume:'img/16.png' };
+
+let currentMode = 'A'; // 'A'|'B'|'C'|'demoKamabuta'|'demoNatsume'
+
+function makeImg(cfg, extraClass){
+  const img = document.createElement('img');
+  img.src = 'parts/' + cfg.part;
+  img.className = 'layer' + (extraClass ? ' ' + extraClass : '');
+  img.style.zIndex = cfg.z;
+  setTransform(img, cfg);
+  return img;
+}
+function setTransform(img, cfg){
+  img.style.transform = `translate(${cfg.x}px, ${cfg.y}px) rotate(${cfg.rotate||0}deg) scale(${cfg.scale})`;
+}
+
+function renderScene(sceneKey){
+  currentMode = sceneKey;
+  partsRoot.innerHTML = '';
+  const list = PLACEMENTS['scene'+sceneKey];
+  list.forEach(cfg => partsRoot.appendChild(makeImg(cfg)));
+  updateSceneButtons();
+  updateOverlayImage();
+}
+
+function renderDemo(demoKey){
+  currentMode = demoKey;
+  partsRoot.innerHTML = '';
+  const demo = PLACEMENTS[demoKey];
+  demo.base.forEach(cfg => partsRoot.appendChild(makeImg(cfg)));
+  if (demo.revealed){
+    partsRoot.appendChild(makeImg(demo.revealed));
+  }
+  const movingEl = makeImg({ part:demo.moving.part, z:demo.moving.z, ...demo.moving.start }, 'anim');
+  partsRoot.appendChild(movingEl);
+  updateSceneButtons();
+  updateOverlayImage();
+
+  // 少し待ってから終了状態へアニメーション
+  requestAnimationFrame(()=>{
+    setTimeout(()=>{
+      setTransform(movingEl, demo.moving.end);
+    }, 250);
+  });
+}
+
+function updateSceneButtons(){
+  document.querySelectorAll('.scene-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.scene === currentMode);
+  });
+  document.querySelectorAll('.demo-btn').forEach(b=>{
+    b.classList.toggle('active', ('demo' + capitalize(b.dataset.demo)) === currentMode);
+  });
+}
+function capitalize(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+function updateOverlayImage(){
+  overlayOrig.src = ORIG_IMG[currentMode] || ORIG_IMG.A;
+}
+
+// ---- ボタン結線 ----
+document.querySelectorAll('.scene-btn').forEach(b=>{
+  b.addEventListener('click', ()=> renderScene(b.dataset.scene));
+});
+document.querySelectorAll('.demo-btn').forEach(b=>{
+  b.addEventListener('click', ()=> renderDemo('demo'+capitalize(b.dataset.demo)));
+});
+
+// ---- 比較モード ----
+const compareToggle = document.getElementById('compareToggle');
+const compareOpacity = document.getElementById('compareOpacity');
+const compareOpacityLabel = document.getElementById('compareOpacityLabel');
+function applyOverlayOpacity(){
+  const v = compareToggle.checked ? (compareOpacity.value/100) : 0;
+  overlayOrig.style.opacity = v;
+  compareOpacityLabel.textContent = compareOpacity.value + '%';
+}
+compareToggle.addEventListener('change', applyOverlayOpacity);
+compareOpacity.addEventListener('input', applyOverlayOpacity);
+
+// ---- レスポンシブ・スケーリング ----
+function fitStage(){
+  const w = stageOuter.clientWidth;
+  const scale = w / 1600;
+  stage.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', fitStage);
+
+// ---- 初期化 ----
+fitStage();
+renderScene('A');
+applyOverlayOpacity();
+</script>
+</body>
+</html>
