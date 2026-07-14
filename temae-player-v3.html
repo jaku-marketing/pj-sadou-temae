@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<!--
+  茶道お点前プレイヤー v3（54手・文言正本対応）
+  ====================================================================
+  ・v2を保全し、v3専用の手順・配置レイヤーで54手へ再構成。
+  ・修正/追加：
+    ① 解説OFF時の画像はみ出し → フレームを画像比(1600:912)にJSでフィット（余白ゼロ・開閉どちらでも）
+    ② 先生コメント(吹き出し)を撤去 → 「稽古の心得」に先生の顔写真(img/2.png)を追加
+    ③ 概要文を表千家・風炉でブラッシュアップ（PROCEDURE.md準拠・要監修。手順詳細の細部は社中/教本で差あり）
+    ④ 道具ピクトグラムを追加（各道具チップにアイコン）
+  ====================================================================
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>茶道お点前 v3 — お稽古プレイヤー（表千家・女性・夏）</title>
+<style>
+  :root{
+    --rose:#c98a96; --rose-deep:#9c5d69; --rose-soft:#efe1e4;
+    --bg:#f1ece9; --surface:#fffdfc; --surface-2:#f6efec;
+    --ink:#2b2421; --ink-soft:#857873; --faint:#aa9c96; --accent:#7a5d54;
+    --line:rgba(43,36,33,.12); --stage-bg:#e7ddd8; --chip-bg:#f1e6e6;
+    --font:"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+    --font-head:"Hiragino Mincho ProN","Noto Serif JP",serif;
+    --radius:18px; --radius-s:11px;
+    --shadow:0 18px 44px rgba(80,45,55,.18); --shadow-s:0 6px 16px rgba(80,45,55,.10);
+    --dw:380px; --ease:cubic-bezier(.4,.14,.2,1); --ease-out:cubic-bezier(.16,.84,.34,1);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{ margin:0; font-family:var(--font); color:var(--ink); overflow:hidden; background:var(--bg);
+    background-image:
+      repeating-linear-gradient(60deg, rgba(156,93,105,.045) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(-60deg, rgba(156,93,105,.045) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(0deg, rgba(156,93,105,.035) 0 1px, transparent 1px 22px);
+    -webkit-font-smoothing:antialiased; }
+  button{ font-family:inherit; color:inherit; cursor:pointer; }
+  a{ color:inherit; text-decoration:none; }
+  svg{ display:block; }
+  .ico{ width:22px; height:22px; }
+  .app{ height:100dvh; display:grid; grid-template-rows:auto auto 1fr auto; }
+
+  /* TOP BAR */
+  .topbar{ display:flex; align-items:center; gap:13px; padding:11px 16px; background:var(--surface); border-bottom:1px solid var(--line); position:relative; z-index:30; }
+  .brand{ display:flex; align-items:center; gap:11px; min-width:0; flex:1 1 auto; }
+  .logo{ display:inline-flex; align-items:center; justify-content:center; height:38px; padding:0 13px; border-radius:var(--radius-s); background:linear-gradient(140deg,var(--rose),var(--rose-deep)); color:#fff; font-family:var(--font-head); font-weight:700; letter-spacing:.16em; font-size:15px; text-indent:.14em; box-shadow:var(--shadow-s); flex:0 0 auto; transition:.2s var(--ease); }
+  .logo:hover{ transform:translateY(-1px); }
+  .ctx{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .ctx .a{ font-size:11px; letter-spacing:.14em; color:var(--rose-deep); font-weight:700; }
+  .ctx .b{ font-size:11px; letter-spacing:.05em; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .switch{ display:inline-flex; align-items:center; gap:10px; padding:7px 14px 7px 9px; border:1px solid var(--line); border-radius:99px; background:var(--surface-2); transition:.22s var(--ease); flex:0 0 auto; }
+  .switch:hover{ border-color:var(--rose); }
+  .sw-track{ position:relative; width:42px; height:24px; border-radius:99px; background:var(--faint); transition:background .28s var(--ease); flex:0 0 auto; }
+  .sw-knob{ position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.22); transition:transform .3s var(--ease-out); }
+  .switch.on .sw-track{ background:linear-gradient(140deg,var(--rose),var(--rose-deep)); }
+  .switch.on .sw-knob{ transform:translateX(18px); }
+  .sw-label{ font-size:12.5px; font-weight:700; letter-spacing:.05em; color:var(--ink-soft); white-space:nowrap; }
+  .switch.on .sw-label{ color:var(--rose-deep); }
+  .ham{ display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border:1px solid var(--line); border-radius:var(--radius-s); background:var(--surface-2); color:var(--ink); transition:.22s var(--ease); flex:0 0 auto; }
+  .ham:hover{ border-color:var(--rose); color:var(--rose-deep); }
+
+  /* PROGRESS */
+  .progress{ display:flex; align-items:center; gap:13px; padding:9px 16px; background:var(--surface-2); border-bottom:1px solid var(--line); position:relative; z-index:20; }
+  .phases{ display:flex; gap:7px; flex:0 0 auto; }
+  .phase{ display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); border-radius:99px; padding:5px 12px; background:transparent; font-size:11.5px; letter-spacing:.05em; color:var(--ink-soft); font-weight:700; white-space:nowrap; transition:.22s var(--ease); }
+  .phase .ti{ width:14px; height:14px; }
+  .phase:hover{ border-color:var(--rose); color:var(--rose-deep); }
+  .phase.on{ background:var(--rose); border-color:var(--rose); color:#fff; }
+  .pbar{ flex:1 1 auto; height:6px; border-radius:99px; background:var(--rose-soft); overflow:hidden; min-width:50px; }
+  .pbar i{ display:block; height:100%; width:0; border-radius:99px; background:linear-gradient(90deg,var(--rose),var(--rose-deep)); transition:width .5s var(--ease-out); }
+  .pcount{ flex:0 0 auto; font-size:12px; color:var(--ink-soft); white-space:nowrap; font-weight:700; }
+  .pcount b{ color:var(--rose-deep); font-size:1.3em; font-family:var(--font-head); }
+
+  /* BODY */
+  .body{ position:relative; min-height:0; display:grid; grid-template-columns:1fr var(--dw); transition:grid-template-columns .44s var(--ease); }
+  .body.closed{ grid-template-columns:1fr 0px; }
+  .stage{ position:relative; min-width:0; min-height:0; display:flex; align-items:center; justify-content:center; padding:20px; }
+  /* フレームは JS で画像比(1600:912)にフィット。余白・はみ出しゼロ。 */
+  .imgframe{ position:relative; border-radius:var(--radius); overflow:hidden; background:var(--stage-bg); border:1px solid var(--line); box-shadow:var(--shadow); }
+
+  /* ---------- パーツステージ（v2：合成パーツをCSSトゥイーンで動かす） ---------- */
+  #partsStage{
+    position:absolute; top:0; left:0;
+    width:1600px; height:912px;
+    transform-origin:0 0;
+    overflow:hidden;
+    opacity:0;
+    transition:opacity .5s var(--ease);
+    pointer-events:none;
+  }
+  #partsStage.show{ opacity:1; }
+  #partsStage .p-bg{ position:absolute; top:0; left:0; width:1600px; height:912px; }
+  .p-layer{ position:absolute; top:0; left:0; transform-origin:0 0; pointer-events:none; user-select:none; -webkit-user-drag:none; opacity:1; }
+  .p-layer.tween{ transition: transform 1.3s cubic-bezier(.45,0,.2,1), opacity .5s var(--ease); }
+  .p-layer.fade{ transition: opacity .5s var(--ease); }
+  #partsRoot.no-anim .p-layer{ transition:none !important; }
+
+  /* DRAWER */
+  .drawer{ position:relative; min-width:0; min-height:0; overflow:hidden; background:var(--surface); border-left:1px solid var(--line); box-shadow:-12px 0 30px rgba(80,45,55,.06); }
+  .body.closed .drawer{ opacity:0; }
+  .drawer .scroll{ position:absolute; inset:0; overflow-y:auto; scrollbar-width:thin; display:flex; flex-direction:column; }
+  .drawer .scroll::-webkit-scrollbar{ width:7px; } .drawer .scroll::-webkit-scrollbar-thumb{ background:var(--rose-soft); border-radius:6px; }
+  .d-head{ flex:0 0 auto; padding:18px 20px 0; }
+  .kicker{ display:inline-block; font-size:10.5px; letter-spacing:.14em; font-weight:800; color:#fff; background:var(--rose); border-radius:99px; padding:3px 11px; }
+  .d-te{ font-size:11.5px; letter-spacing:.1em; color:var(--rose-deep); font-weight:700; margin:12px 0 3px; }
+  .d-title{ font-family:var(--font-head); font-size:22px; font-weight:700; letter-spacing:.04em; margin:0; line-height:1.35; }
+  .orig-link{ display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:700; color:var(--rose-deep); letter-spacing:.04em; margin:8px 0 0; }
+  .orig-link:hover{ text-decoration:underline; }
+  .d-body{ flex:1 1 auto; display:flex; flex-direction:column; padding:14px 20px 0; }
+  .d-text{ font-size:14.5px; line-height:2.0; letter-spacing:.02em; margin:0 0 14px; }
+  .d-text b{ color:var(--rose-deep); font-weight:700; }
+  .tools{ display:flex; flex-wrap:wrap; gap:7px; margin:0 0 16px; }
+  .tool{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); background:var(--chip-bg); border-radius:99px; padding:5px 11px 5px 9px; font-weight:600; }
+  .tool .ti{ width:16px; height:16px; color:var(--rose-deep); }
+  .onna{ font-size:12.5px; line-height:1.7; color:var(--ink-soft); background:var(--rose-soft); border-radius:var(--radius-s); padding:9px 12px; margin:0 0 14px; border-left:3px solid var(--rose); }
+  .onna::before{ content:"女点前のポイント"; display:block; font-size:10px; letter-spacing:.1em; color:var(--rose-deep); font-weight:800; margin-bottom:3px; }
+
+  /* 下部ゾーン：稽古の心得（先生の顔つき）＋ 豆知識 */
+  .bottom-zone{ margin-top:auto; padding:16px 18px 20px; }
+  .kokoroe{ display:block; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius-s); padding:13px 15px; margin-bottom:13px; }
+  .kokoroe .head{ display:flex; align-items:center; gap:9px; margin-bottom:9px; }
+  .sensei-face{ flex:0 0 auto; width:40px; height:40px; border-radius:50%; overflow:hidden; position:relative; background:radial-gradient(120% 120% at 40% 30%, #fff, var(--rose-soft)); border:2px solid var(--surface); box-shadow:0 3px 9px rgba(80,45,55,.18), 0 0 0 1px var(--line); }
+  .sensei-face img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:52% 20%; }
+  .sensei-face svg{ position:absolute; inset:0; width:100%; height:100%; }
+  .kokoroe .h{ display:flex; align-items:center; gap:7px; font-size:11.5px; letter-spacing:.1em; color:var(--rose-deep); font-weight:800; margin:0; }
+  .kokoroe .h::before{ content:""; width:5px; height:15px; border-radius:2px; background:var(--rose); }
+  .kokoroe p{ margin:0; font-size:13.5px; line-height:1.95; color:var(--ink); }
+  .tip-h{ display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:800; letter-spacing:.06em; color:var(--rose-deep); margin-bottom:8px; }
+  .tip-h .ico{ width:16px; height:16px; }
+  .tip-card{ background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius-s); padding:12px 13px; }
+  .tip-cat{ display:inline-block; font-size:9.5px; letter-spacing:.1em; font-weight:800; color:var(--rose-deep); background:var(--rose-soft); border-radius:99px; padding:2px 9px; margin-bottom:6px; }
+  .tip-tt{ font-family:var(--font-head); font-size:14px; font-weight:700; margin-bottom:4px; }
+  .tip-tx{ font-size:12.5px; line-height:1.8; color:var(--ink-soft); }
+
+  @keyframes enterUp{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:none;} }
+  .anim .d-head, .anim .d-body{ animation:enterUp .42s var(--ease-out) both; }
+  .anim .d-body{ animation-delay:.05s; }
+
+  /* FOOTER */
+  .footer{ display:flex; align-items:center; gap:12px; padding:11px 16px; background:var(--surface); border-top:1px solid var(--line); position:relative; z-index:20; }
+  .navbtn{ display:inline-flex; align-items:center; gap:9px; padding:12px 20px; border:1px solid var(--line); border-radius:99px; background:var(--surface-2); color:var(--ink); font-size:14px; font-weight:700; letter-spacing:.06em; transition:.22s var(--ease); flex:0 0 auto; }
+  .navbtn:hover:not(:disabled){ border-color:var(--rose); color:var(--rose-deep); transform:translateY(-2px); box-shadow:var(--shadow-s); }
+  .navbtn.next{ background:linear-gradient(140deg,var(--rose),var(--rose-deep)); color:#fff; border-color:transparent; box-shadow:var(--shadow-s); }
+  /* next はグラデ地に白文字なので、通常hoverの文字色上書き（rose-deep）を打ち消して白のまま保つ
+     （そのままだと文字が背景に溶け込み「クリック後も灰色っぽい」ように見えるため） */
+  .navbtn.next:hover:not(:disabled){ color:#fff; border-color:transparent; filter:brightness(1.07); transform:translateY(-2px); box-shadow:var(--shadow-s); }
+  .navbtn:disabled{ opacity:.32; cursor:not-allowed; }
+  .navbtn .ico{ width:18px; height:18px; }
+  .foot-mid{ flex:1 1 auto; text-align:center; min-width:0; }
+  .foot-mid .t{ font-family:var(--font-head); font-size:15px; font-weight:700; letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .foot-mid .s{ font-size:11px; color:var(--ink-soft); letter-spacing:.06em; }
+
+  /* MENU（右） */
+  .scrim{ position:fixed; inset:0; background:rgba(30,20,24,.42); opacity:0; pointer-events:none; transition:.28s var(--ease); z-index:40; }
+  .scrim.show{ opacity:1; pointer-events:auto; }
+  .menu{ position:fixed; top:0; right:0; bottom:0; width:330px; max-width:88vw; z-index:50; background:var(--surface); border-left:1px solid var(--line); box-shadow:var(--shadow); transform:translateX(104%); transition:transform .34s var(--ease-out); display:flex; flex-direction:column; }
+  .menu.show{ transform:none; }
+  .menu-h{ padding:16px 16px 8px; border-bottom:1px solid var(--line); }
+  .menu-h h2{ font-family:var(--font-head); font-size:16px; margin:2px; letter-spacing:.06em; }
+  .menu-h p{ font-size:11px; color:var(--ink-soft); margin:4px 2px 0; }
+  .menu-scroll{ flex:1 1 auto; overflow-y:auto; padding:10px 12px 16px; scrollbar-width:thin; }
+  .nav-phase{ font-size:10.5px; letter-spacing:.1em; color:var(--faint); font-weight:800; margin:12px 2px 5px; }
+  .nav-item{ display:flex; gap:9px; align-items:center; width:100%; text-align:left; background:transparent; border:0; border-radius:var(--radius-s); padding:8px 9px; font-size:12.5px; color:var(--ink-soft); transition:.16s var(--ease); }
+  .nav-item:hover{ background:var(--surface-2); color:var(--ink); }
+  .nav-item .num{ flex:0 0 auto; width:23px; height:23px; border-radius:50%; border:1px solid var(--line); display:inline-flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; }
+  .nav-item.cur{ background:var(--rose-soft); color:var(--rose-deep); font-weight:700; }
+  .nav-item.cur .num{ background:var(--rose); border-color:var(--rose); color:#fff; }
+  .nav-item.done .num{ background:var(--chip-bg); }
+
+  /* ≤820px：縦積み（画像が上・解説が下）。本来のレスポンシブ。 */
+  @media (max-width:820px){
+    .body{ grid-template-columns:1fr; grid-template-rows:auto 1fr; transition:grid-template-rows .4s var(--ease); }
+    .body.closed{ grid-template-columns:1fr; grid-template-rows:auto 0px; }
+    .stage{ align-items:flex-start; padding:14px 14px 6px; }
+    .imgframe{ width:100%!important; height:auto!important; aspect-ratio:1600/912; }
+    .drawer{ border-left:0; border-top:1px solid var(--line); box-shadow:0 -8px 22px rgba(80,45,55,.05); }
+    .ctx .b{ display:none; } .navbtn{ padding:11px 15px; font-size:13px; }
+  }
+  @media (max-width:560px){
+    .topbar{ gap:9px; padding:10px 12px; }
+    .logo{ height:34px; padding:0 11px; font-size:14px; }
+    .switch{ padding:6px; gap:0; } .switch .sw-label{ display:none; }
+    .progress{ gap:9px; padding:8px 12px; flex-wrap:wrap; }
+    .pcount{ font-size:11px; }
+    .footer{ gap:8px; padding:10px 12px; } .navbtn{ padding:10px 13px; font-size:12.5px; }
+    .foot-mid .t{ font-size:13.5px; }
+  }
+  @media (max-width:480px){ .stage{ padding:12px; } .phases .phase{ padding:5px 9px; } }
+  @media (prefers-reduced-motion:reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+
+<!-- アイコン定義（UI＋道具ピクトグラム 24x24・currentColor） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ham" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></g></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17c0-1.5-1-2.5-2-4-1.4-2-1-5 1-6.6 2-1.6 6-1.6 8 0 2 1.6 2.4 4.6 1 6.6-1 1.5-2 2.5-2 4"/><path d="M9.5 17.5h5M10 20.5h4"/></g></symbol>
+  <symbol id="i-sensei" viewBox="0 0 64 64"><rect width="64" height="64" fill="#efe1e4"/><path d="M14 60c0-9 8-14 18-14s18 5 18 14z" fill="#9c5d69"/><circle cx="32" cy="32" r="16" fill="#f3ddc9"/><path d="M16 30c0-10 7-16 16-16s16 6 16 16c-3-5-9-7-16-7s-13 2-16 7z" fill="#b9b3ae"/><circle cx="26" cy="33" r="2" fill="#3a2e26"/><circle cx="38" cy="33" r="2" fill="#3a2e26"/><path d="M27 40c3 2.5 7 2.5 10 0" fill="none" stroke="#9c5d69" stroke-width="2" stroke-linecap="round"/></symbol>
+  <!-- 道具 -->
+  <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <symbol id="tt-kama" viewBox="0 0 24 24"><path d="M6.5 12c0-4 11-4 11 0"/><path d="M7 12v3a5 3 0 0 0 10 0v-3"/><path d="M12 6.5V9"/><path d="M9.5 18.5h5"/></symbol>
+  <symbol id="tt-mizusashi" viewBox="0 0 24 24"><path d="M8 10h8v6a2.5 2.5 0 0 1-8 0z"/><path d="M7 10h10"/><path d="M12 6.5V9"/></symbol>
+  <symbol id="tt-chawan" viewBox="0 0 24 24"><path d="M5 11h14l-2 5.2A6 2.4 0 0 1 7 16.2z"/><path d="M5 11a7 2 0 0 1 14 0"/></symbol>
+  <symbol id="tt-natsume" viewBox="0 0 24 24"><path d="M8 11a4 2.4 0 0 1 8 0v4a4 2 0 0 1-8 0z"/><path d="M8 11a4 2 0 0 0 8 0"/><path d="M12 6.5V8.4"/></symbol>
+  <symbol id="tt-kensui" viewBox="0 0 24 24"><path d="M5 12h14l-1.8 4A6 2 0 0 1 6.8 16z"/><path d="M5 12a7 1.8 0 0 1 14 0"/></symbol>
+  <symbol id="tt-futaoki" viewBox="0 0 24 24"><path d="M9 11h6v5H9z"/><path d="M9 11a3 1.4 0 0 1 6 0"/><path d="M9 16a3 1.4 0 0 0 6 0"/></symbol>
+  <symbol id="tt-hishaku" viewBox="0 0 24 24"><path d="M6 11a3 2 0 0 1 6 0v.4a3 2 0 0 1-6 0z"/><path d="M11.5 10.5 19 6.5"/></symbol>
+  <symbol id="tt-fukusa" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M6.5 12h11M12 6.5v11"/></symbol>
+  <symbol id="tt-chashaku" viewBox="0 0 24 24"><path d="M5 18.5 15.5 7.5"/><path d="M15.5 7.5c1.8-1.9 4-.4 3 1.7"/></symbol>
+  <symbol id="tt-chasen" viewBox="0 0 24 24"><path d="M10.7 13.5h2.6v5.5h-2.6z"/><path d="M12 13.5 9.2 6.5M12 13.5V6M12 13.5l2.8-7"/></symbol>
+  <symbol id="tt-futa" viewBox="0 0 24 24"><path d="M6.5 15a5.5 4 0 0 1 11 0z"/><path d="M12 8.5V11"/><path d="M5.5 15h13"/></symbol>
+  <symbol id="tt-chakin" viewBox="0 0 24 24"><rect x="6" y="9" width="12" height="6.5" rx="1.4"/><path d="M6 12.2h12"/></symbol>
+  </g>
+</svg>
+
+<div class="scrim" id="scrim"></div>
+<nav class="menu" id="menu" aria-label="全ての手">
+  <div class="menu-h"><h2>全ての手から選ぶ</h2><p>全 <span id="menuTotal">54</span> 手・三段（清め／点て／仕舞い）</p></div>
+  <div class="menu-scroll" id="navList"></div>
+</nav>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <a class="logo" href="temae-cover.html" aria-label="表紙へ戻る">茶の湯</a>
+      <div class="ctx"><span class="a" id="ctxA">表千家・女点前</span><span class="b" id="ctxB">風炉（夏）／薄茶／運び点前</span></div>
+    </div>
+    <button class="switch on" id="toggleBtn" type="button" role="switch" aria-checked="true" aria-label="解説の表示・非表示">
+      <span class="sw-track"><span class="sw-knob"></span></span><span class="sw-label">解説 <b id="swState">ON</b></span>
+    </button>
+    <button class="ham" id="hamBtn" type="button" aria-label="全ての手のメニューを開く"><svg class="ico"><use href="#i-ham"/></svg></button>
+  </header>
+
+  <div class="progress">
+    <div class="phases" id="phases"></div>
+    <div class="pbar"><i id="pbarFill"></i></div>
+    <div class="pcount">第 <b id="pcur">1</b> 手 ／ 全 <span id="ptot">54</span> 手</div>
+  </div>
+
+  <div class="body" id="bodyGrid">
+    <section class="stage" id="stage" aria-label="お点前の様子">
+      <div class="imgframe" id="imgframe">
+        <div id="partsStage">
+          <img class="p-bg" src="./parts/bg_01_tatami.png" alt="">
+          <div id="partsRoot"></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="drawer" id="drawer" aria-label="解説と豆知識">
+      <div class="scroll" id="drawerScroll">
+        <div class="d-head">
+          <span class="kicker" id="ePhase">① 清め</span>
+          <div class="d-te" id="eTe">運び出し</div>
+          <h2 class="d-title" id="eTitle">初座（風炉と釜）</h2>
+          <a class="orig-link" id="origLink" href="./img/3.png" target="_blank" rel="noopener">原本画像 ↗</a>
+        </div>
+        <div class="d-body">
+          <p class="d-text" id="eText"></p>
+          <div class="tools" id="eTools"></div>
+          <p class="onna" id="eOnna" style="display:none"></p>
+
+          <div class="bottom-zone">
+            <div class="kokoroe">
+              <div class="head">
+                <span class="sensei-face" aria-hidden="true">
+                  <img id="senseiImg" src="./img/2.png" alt="">
+                  <svg id="senseiFallback" style="display:none"><use href="#i-sensei"/></svg>
+                </span>
+                <div class="h">稽古の心得（先生より）</div>
+              </div>
+              <p id="ePoint"></p>
+            </div>
+            <div class="tip">
+              <div class="tip-h"><svg class="ico"><use href="#i-bulb"/></svg>豆知識</div>
+              <div class="tip-card">
+                <span class="tip-cat" id="tipCat">道具</span>
+                <div class="tip-tt" id="tipTt"></div>
+                <div class="tip-tx" id="tipTx"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="footer">
+    <button class="navbtn prev" id="prevBtn" type="button" aria-label="前の手へ"><svg class="ico"><use href="#i-left"/></svg>前へ</button>
+    <div class="foot-mid"><div class="t" id="footT">初座（風炉と釜）</div><div class="s" id="footS">① 清め ・ 運び出し</div></div>
+    <button class="navbtn next" id="nextBtn" type="button" aria-label="次の手へ">次へ<svg class="ico"><use href="#i-right"/></svg></button>
+  </footer>
+</div>
+
+<script src="./data/steps-v3.js"></script>
+<script src="./data/tidbits.js"></script>
+<script src="./data/placements51.js"></script>
+<script src="./data/placements-v3.js"></script>
+<script>
+"use strict";
+(function(){
+  const ST = window.SADO_STEPS_V3 || {steps:[],phases:[],meta:{}};
+  const STEPS = ST.steps || [], PHASES = ST.phases || [], META = ST.meta || {};
+  const TID = window.SADO_TIDBITS || [];
+  const PL = window.SADO_PLACEMENTS_V3 || {poses:{}, steps:[]};
+  const POSES = PL.poses || {};
+  const PLSTEPS = {}; (PL.steps||[]).forEach(s=>{ PLSTEPS[s.n]=s; });
+  const TOTAL = STEPS.length;
+  const AR = 1600/912;   // 画像の縦横比
+
+  /* v3は表示番号と内部番号を1〜54で一致させる。 */
+  const SKIP_STEPS = new Set();
+  const isSkippedIdx = i => (STEPS[i] && SKIP_STEPS.has(STEPS[i].n));
+
+  /* 表示層も同じ連番を参照する。 */
+  const VISIBLE_STEPS = STEPS.filter(s => !SKIP_STEPS.has(s.n));
+  const VISIBLE_TOTAL = VISIBLE_STEPS.length;
+  const DISPLAY_NUM = {};                                  // データのn → 表示上の連番（1始まり）
+  VISIBLE_STEPS.forEach((s,i) => { DISPLAY_NUM[s.n] = i+1; });
+
+  /* 道具→ピクトグラム */
+  const TOOL_ICON = { "風炉釜":"kama","釜":"kama","水指":"mizusashi","茶碗":"chawan","棗":"natsume","建水":"kensui","蓋置":"futaoki","柄杓":"hishaku","帛紗":"fukusa","茶杓":"chashaku","茶筅":"chasen","釜の蓋":"futa","茶巾":"chakin" };
+  const PHASE_ICON = { junbi:"fukusa", tate:"chasen", shimai:"chawan" };
+
+  /* 概要文（表千家・風炉・薄茶・運び点前。PROCEDURE.md準拠。
+     2026-07-03 出典検証済み: 「にじる」誤用・「こ」の字（裏千家表現）・断定不能な分量表現を除去。
+     棗の拭き方の正式表現は当主確認待ち。分量や置き向き等の細部は社中・教本で差があります） */
+  const ENRICH = {
+    1:"点前座の<b>左前方</b>に風炉が据えられ、釜がかかっています。夏は火を客から遠ざける<b>風炉</b>の設え。本勝手では、亭主は<b>帛紗を勝手付の左</b>につけ、心を静めて席に入ります。",
+    2:"<b>水指</b>を両手で持ち、<b>左足から</b>歩いて運び入れます（畳一枚を六歩）。<b>風炉の右横</b>の定座へ、置く間際まで気を抜かずに静かに据えましょう。",
+    3:"仕組んだ<b>茶碗</b>と<b>棗</b>を運び出します。水指の前に<b>茶碗を左・棗を右</b>、三器が<b>二等辺三角</b>を描くように置くのが目安です。",
+    4:"<b>蓋置</b>と<b>柄杓</b>を仕組んだ<b>建水</b>を持ち出し、居前に座ります。建水は控えめな器、ひっそりと運びます。",
+    5:"<b>女性は左手で柄杓を少し上げ、右手で蓋置を取り出します</b>（男点前との最初の分かれ目）。柄杓をいったん建水に戻し、蓋置を<b>風炉の左</b>へ据えたら、柄杓を持ち直して<b>蓋置に引いて</b>構えます。",
+    6:"建水を<b>膝頭の線あたりまで進め</b>、客と<b>総礼</b>。ここで主客の呼吸を合わせ、いよいよ点前が始まります。",
+    7:"<b>茶碗</b>を体の<b>正面</b>へ出し、清めの構えを整えます。",
+    8:"<b>棗</b>を清めの位置へ出し、茶碗と棗を手前に構えます。",
+    9:"<b>帛紗をさばき</b>、<b>棗の蓋の上</b>を拭き清めます。塵を払うと同時に、亭主が心を改める所作です。",
+    10:"清めた<b>棗</b>を所定の位置へ置きます（ここでは茶杓はのせません）。",
+    11:"帛紗を捌き直し、<b>茶杓</b>を拭き清めます。竹の節を傷めぬよう、ていねいに。",
+    12:"清めた<b>茶杓</b>を<b>棗の上</b>に置きます。",
+    13:"<b>茶筅</b>を取り、<b>棗の右</b>に立てて置きます。これで清めが整いました。",
+    14:"<b>茶碗</b>を手前に引き、茶筅通しの支度に移ります。",
+    15:"<b>柄杓</b>を取って立て、湯を扱う構えをとります。",
+    16:"<b>帛紗で釜の蓋</b>を取り、<b>蓋置</b>の上へ。熱い蓋は帛紗ごしにそっと扱います。",
+    17:"<b>茶巾</b>を釜蓋のつまみ手前に、縦に置きます。",
+    18:"<b>柄杓</b>で湯を汲み、<b>茶碗</b>へ入れます。湯を切る所作も静かに。",
+    19:"柄杓を釜の口に掛けて置きます（<b>置き柄杓</b>）。合を釜口に、柄はまっすぐ。",
+    20:"茶碗の湯で<b>茶筅通し</b>。穂先を上げ下げして点検し、茶筅を清めます。抜けやすい所作なので、ひと呼吸おいて。",
+    21:"<b>穂先を改め</b>、茶筅を元へ戻します。",
+    22:"湯を<b>反時計に2〜3度</b>回して茶碗を温めます。お茶がよく映えるための心づかい。",
+    23:"温めた湯を<b>建水</b>へあけます。",
+    24:"<b>茶巾</b>で茶碗を拭き清めます。底から縁へ、ていねいに。",
+    25:"拭き清めた茶碗を、茶を点てる<b>定位置</b>へ置きます。",
+    26:"<b>棗</b>を取って蓋を開けます。青々とした抹茶が現れます。",
+    27:"茶杓で<b>一杓半</b>ほど、静かにすくいます（分量は目安）。",
+    28:"抹茶を茶碗へ入れ、<b>三の字</b>に均します。",
+    29:"棗の蓋を閉じ、茶杓を縁で軽く<b>コンと</b>打って元へ戻します。",
+    30:"右手でつまみを取り左手に持ち替え、<b>水指の蓋</b>を開けて左横に立てかけます。塗蓋を傷めぬよう静かに。",
+    31:"<b>柄杓</b>で湯を汲み、茶碗へ静かに注ぎます。",
+    32:"置き柄杓のあと、<b>茶筅</b>で点てます。手首はやわらかく。",
+    33:"泡を整えるように点てます。<b>表千家は泡を立てすぎず</b>、自然な姿に。",
+    34:"薄茶が点て上がりました。茶碗を<b>反時計に回し</b>、<b>正面を客へ</b>向けて差し上げます。",
+    35:"返った茶碗に水を汲み入れ、すすぎに移ります（引き柄杓）。",
+    36:"茶碗の水で<b>茶筅をすすぎ</b>ます（茶筅通し）。",
+    37:"茶筅を持ち上げ、<b>穂先を改め</b>ます。",
+    38:"茶碗を傾け、水を<b>建水</b>にあけます。",
+    39:"<b>茶巾</b>を茶碗に入れます。",
+    40:"茶巾を整えて茶碗に納めます。",
+    41:"茶碗に<b>茶筅を仕組み</b>ます。",
+    42:"<b>帛紗を捌き</b>、茶杓を清めます（女性は建水を先に下げてから）。",
+    43:"清めた茶杓を<b>茶碗の上にのせ</b>、茶碗を初めの位置に直します。",
+    44:"<b>棗</b>を元の位置へ移します。",
+    45:"<b>茶碗</b>を元の位置へ移します。",
+    46:"柄杓で<b>釜に水を二杓</b>さします。湯を改める所作です。",
+    47:"<b>柄杓を構え</b>ます。",
+    48:"柄杓を構えたまま、<b>釜の蓋</b>を閉めます（風炉は<b>少しきって</b>置きます）。",
+    49:"<b>柄杓を蓋置に置き</b>、<b>水指の蓋</b>を閉めます（逆三手）。",
+    50:"<b>建水を左手</b>に、<b>右手に柄杓と蓋置</b>を構えて持ち帰ります（女性の形）。",
+    51:"<b>茶碗と棗</b>を持ち帰り、最後に<b>水指</b>を両手で。襖を閉めて<b>総礼</b>、点前を終えます。"
+  };
+
+  /* 先生の「稽古の心得」コメント（全51手それぞれ別。所作への心構え＝サンプル・要監修） */
+  const KOKOROE = {
+    1:"火と向き合う前に、まず心を静めましょう。お点前は、座についた瞬間から始まっています。",
+    2:"重い水指も、軽そうに運ぶのが品。左足から、畳一枚を六歩の運びで。",
+    3:"三器の置き合わせは点前の土台。位置が定まれば、心も定まります。",
+    4:"建水は控えめな器。だからこそ、ていねいに扱う姿が見られています。",
+    5:"柄杓と蓋置の出し方が、女点前の最初の見せどころ。ゆっくり、迷わず。",
+    6:"総礼は形だけの礼にあらず。客と心をひとつにする、大切なひと呼吸です。",
+    7:"茶碗を正面に。ここから清めに入ります。背筋を、すっと伸ばして。",
+    8:"棗を手元へ。次の所作を思い描きながら、落ち着いて。",
+    9:"帛紗さばきは、心を整える所作。急がず、指先まで神経を通します。",
+    10:"清めた棗は、定めの場所へ静かに。置く音さえ、もてなしの一部です。",
+    11:"茶杓は細く繊細。節を傷めぬよう、やさしく拭き清めます。",
+    12:"ひとつ終えるごとに、ひと呼吸。茶杓を棗の上へ静かに。",
+    13:"茶筅を立てれば、清めは結び。ここまでの流れを心で振り返って。",
+    14:"茶碗を引いて、いよいよ茶筅通し。手元に視線を集めましょう。",
+    15:"柄杓を立てる姿に、点前の品が表れます。肘を張らず、自然に。",
+    16:"熱い釜の蓋は帛紗ごしに。あわてず、そっと蓋置へ預けます。",
+    17:"茶巾は清らかさの象徴。向きを整え、きちんと置きましょう。",
+    18:"湯を汲む音、注ぐ音。耳でも点前を感じてもらう心づもりで。",
+    19:"置き柄杓は、ひと区切りの所作。柄をまっすぐ、美しく見せて。",
+    20:"茶筅通しは抜けやすい所。穂先を一本ずつ確かめる気持ちで。",
+    21:"穂先を改めたら、静かに戻します。道具を労わる心を忘れずに。",
+    22:"茶碗を温めるのは、お茶を美しく点てるため。湯をやわらかく回して。",
+    23:"湯を捨てる所作も点前のうち。雑にならぬよう、最後まで丁寧に。",
+    24:"茶巾で拭く手は、円を描くように。乾いた清らかな碗に仕上げます。",
+    25:"茶碗を定座へ。さあ、いよいよお茶を点てます。心を込めて。",
+    26:"棗の蓋を開ければ、鮮やかな緑。この一瞬の美しさも味わって。",
+    27:"抹茶は静かにすくいます。分量より、ひと匙に込める気持ちを大切に。",
+    28:"三の字に均すのは、湯がよくなじむため。手早く、けれど落ち着いて。",
+    29:"茶杓を縁でコン。小さな音にも、けじめがあります。",
+    30:"水指の蓋を開けるのは、点てる支度の合図。塗蓋を傷めぬよう静かに。",
+    31:"湯を注ぎ、いよいよ点てます。呼吸を整えて、心をひとつに。",
+    32:"茶筅は手首をやわらかく。力ではなく、リズムで点てます。",
+    33:"点て終わりから茶碗を出すまで、動きを途切れさせず静かにつなげましょう。",
+    34:"返った茶碗を丁寧に迎え、次の一服へ気持ちをつなげます。",
+    35:"すすぎも一服を点てる支度のうち。急がず、湯の動きを確かめましょう。",
+    36:"正客の言葉を受け、点てる所作から仕舞う所作へ心を切り替えます。",
+    37:"ここから扱うのは湯ではなく水です。次の茶筅すすぎへつなげましょう。",
+    38:"茶筅通しと同じく、穂先を傷めないよう軽やかに扱います。",
+    39:"穂先を目で追い、状態を確かめてから静かに戻しましょう。",
+    40:"茶碗を傾ける動きから、次の茶巾の扱いへ滑らかにつなげます。",
+    41:"茶巾の向きと持つ位置を確かめ、形を崩さず茶碗へ運びましょう。",
+    42:"初めに仕組んだ形を思い出しながら、茶巾を静かに収めます。",
+    43:"茶筅をまっすぐ立て、次に茶杓を戻せる形を整えましょう。",
+    44:"女点前の順序を意識し、建水、帛紗、茶杓の流れを一続きに行います。",
+    45:"茶杓の向きと位置を確かめ、初めの姿へ戻しましょう。",
+    46:"棗を置く位置を先に定め、迷いなく一手で運びます。",
+    47:"茶碗と棗の間合いを整え、中仕舞いの姿を静かに決めましょう。",
+    48:"一杓ごとの往復を丁寧に行い、二杓の動きを同じ調子でそろえます。",
+    49:"柄杓の向きを整え、次の釜蓋の扱いへ落ち着いて移ります。",
+    50:"蓋を置く音を立てず、風炉らしい少し切った位置に納めます。",
+    51:"柄杓が据わってから水指へ向かい、二つの所作を混ぜずに行いましょう。",
+    52:"道具の組み合わせを崩さず、静かに左回りします。",
+    53:"茶碗の仕組みを崩さず、棗とともに安定して運びましょう。",
+    54:"最後の一礼までがお点前です。始まりと同じ静かな気持ちで納めましょう。"
+  };
+
+  /* 各手に固有の豆知識を割り当て（全51手すべて別。tidbits.js のタイトルで参照） */
+  const STEP_TIP = {
+    1:"風炉は夏の設え", 2:"水指と釜の役割", 3:"運び点前は基本の形", 4:"建水は水こぼし", 5:"蓋置は釜蓋・柄杓の留め",
+    6:"和敬清寂の四つの心", 7:"茶碗の正面を避ける", 8:"棗は薄茶器", 9:"帛紗で道具を清める", 10:"清めの所作の意味",
+    11:"茶杓は抹茶をすくう匙", 12:"茶杓の銘という文化", 13:"茶筅は茶を点てる道具", 14:"楽茶碗と利休の美意識", 15:"柄杓で湯水を汲む",
+    16:"炭点前の役割", 17:"茶巾は清浄の白布", 18:"抹茶を点てる喫茶法", 19:"風炉の灰型", 20:"銘は問答の楽しみ",
+    21:"唐物と和物の茶碗", 22:"季節を映す取り合わせ", 23:"水屋は準備の場", 24:"井戸茶碗の景色", 25:"床の間と掛物",
+    26:"表千家の点前の特徴", 27:"一期一会の心", 28:"薄茶と濃茶の違い", 29:"利休七則の教え", 30:"不審菴は表千家の象徴",
+    31:"茶の湯と禅のつながり", 32:"千家十職とは", 33:"茶碗を回す理由", 34:"菓子を先にいただく", 35:"主菓子と干菓子",
+    36:"一期一会の心", 37:"水指と釜の役割", 38:"茶筅は茶を点てる道具", 39:"茶筅は茶を点てる道具", 40:"建水は水こぼし",
+    41:"茶巾は清浄の白布", 42:"茶巾は清浄の白布", 43:"茶筅は茶を点てる道具", 44:"帛紗で道具を清める", 45:"茶杓は抹茶をすくう匙",
+    46:"表千家の点前の特徴", 47:"風炉の灰型", 48:"風炉は夏の設え", 49:"柄杓で湯水を汲む", 50:"風炉は夏の設え",
+    51:"水指と釜の役割", 52:"運び点前は基本の形", 53:"運び点前は基本の形", 54:"扇子を前に置く挨拶"
+  };
+
+  let cur = 0, open = true;
+  const $ = id => document.getElementById(id);
+  const grid = $('bodyGrid'), stage = $('stage'), frame = $('imgframe');
+
+  if (META.ryugi) $('ctxA').textContent = META.ryugi + '・' + (META.gender||'');
+  if (META.kisetsu) $('ctxB').textContent = [META.kisetsu, META.cha, META.style].filter(Boolean).join('／');
+  $('ptot').textContent = VISIBLE_TOTAL; $('menuTotal').textContent = VISIBLE_TOTAL;
+
+  const sImg=$('senseiImg'), sFb=$('senseiFallback');
+  sImg.addEventListener('error', ()=>{ sImg.style.display='none'; sFb.style.display=''; });
+
+  const phaseById = {}; PHASES.forEach(p => phaseById[p.id]=p);
+  const firstIdx = pid => STEPS.findIndex(s => s.phase===pid);
+
+  const phasesWrap = $('phases');
+  PHASES.forEach(p => {
+    const b=document.createElement('button'); b.className='phase'; b.type='button'; b.dataset.pid=p.id;
+    const ic = PHASE_ICON[p.id]; b.innerHTML = (ic?'<svg class="ti"><use href="#tt-'+ic+'"/></svg>':'') + p.label;
+    b.title=p.sub||'';
+    b.addEventListener('click', () => { const i=firstIdx(p.id); if(i>=0) goTo(i); });
+    phasesWrap.appendChild(b);
+  });
+
+  const navList = $('navList');
+  PHASES.forEach(p => {
+    const h=document.createElement('div'); h.className='nav-phase'; h.textContent=p.label+'　'+(p.sub||''); navList.appendChild(h);
+    STEPS.forEach((s,i)=>{ if(s.phase!==p.id) return;
+      if(SKIP_STEPS.has(s.n)) return;   // 非破壊スキップ：メニュー一覧には出さない（データは温存）
+      const b=document.createElement('button'); b.className='nav-item'; b.type='button'; b.dataset.idx=i;
+      b.innerHTML='<span class="num">'+DISPLAY_NUM[s.n]+'</span><span>'+s.title+'</span>';
+      b.addEventListener('click', () => { goTo(i); openMenu(false); });
+      navList.appendChild(b);
+    });
+  });
+
+  const TIP_BY_TITLE={}; TID.forEach(t=>{ TIP_BY_TITLE[t.title]=t; });
+  function tipFor(n){ return TIP_BY_TITLE[STEP_TIP[n]] || TID[(n-1)%(TID.length||1)] || null; }
+
+  /* フレームを画像比にフィット（はみ出し・余白ゼロ） */
+  const partsStage=$('partsStage'), partsRoot=$('partsRoot');
+  function fitFrame(){
+    const cs=getComputedStyle(stage);
+    const aw=stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const ah=stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if(aw<=0||ah<=0) return;
+    let w=aw, h=w/AR; if(h>ah){ h=ah; w=h*AR; }
+    frame.style.width=Math.round(w)+'px'; frame.style.height=Math.round(h)+'px';
+    const s = w/1600;
+    partsStage.style.transform = 'scale('+s+')';
+  }
+  function animateFit(dur){ const t0=performance.now(); (function loop(t){ fitFrame(); if(t-t0<dur) requestAnimationFrame(loop); })(performance.now()); }
+  window.addEventListener('resize', fitFrame);
+  grid.addEventListener('transitionend', e=>{ if(e.propertyName==='grid-template-columns') fitFrame(); });
+
+  /* ==========================================================================
+     パーツステージ・エンジン（v2の核）
+     2026-07-04 当主レビュー第3弾：新ルール4点を全面反映（Fable5設計）。
+       ① 据わっている器（風炉釜・水指・茶碗・棗＝VESSEL_KEYS）は、状態切替（別ファイルへの
+          差し替え）のときに絶対に上下させない。旧来の pick-up→set-down（フロート）は撤去し、
+          「その場でレイヤーを重ねてクロスフェード」する vesselCrossfade に一本化。
+          位置は固定・浮遊なし。pick-up/set-down は実際に手で取る/置く道具
+          （茶杓・茶筅・茶巾・蓋類・柄杓）専用のモーションとして残す。
+       ② 茶碗・棗などの短距離移動（soft-shift）は「くの字」に浮く中間apexを廃し、
+          直線的にスッと滑る straight-slide に統一（softShift関数自体を再定義）。
+       ③ 柄杓（key:'hishaku'）は常に最前面。zForKey() でz-indexを恒久的に最大値に固定。
+       ④ 蓋（棗蓋・水指蓋・釜蓋）は「消えてはいけないタイミングで消えない」よう
+          placements51.js側でcontinuityを確保（n26棗蓋追加・n31水指蓋欠落修正）。
+     所作語彙（変更なしの既存4種＋新設）：
+       - set-down／pick-up／soft-shift（straight-slide化）／slide-forward／carry-in：既存どおり。
+       - vesselCrossfade（新設）：VESSEL_KEYS専用。位置固定のままopacityのみクロスフェード。
+         motion.delay で開始待ち（例：n19「注いでいる柄杓が消えてから釜の絵が変わる」の順序演出）。
+         motion.mid + motion.holdMs で「中間状態を経由してから最終状態へ」の二段クロスフェードも可能
+         （例：n29「棗が閉じて据わってから茶杓が置かれる」）。
+       - chawan-mawashi（新設・n22専用）：拡大・浮上・反時計回転を経て元の姿勢へ戻る複合WAAPI
+         キーフレームアニメ（茶碗を温める「回し」の表現）。
+     2026-07-04 当主レビュー第4弾で追加した所作：
+       - vesselCrossfade の opts（dropPx/durationMs）：新要素側だけ「上方から遅めにフェードイン」
+         させられる（n24「茶巾がゆったり降りる」）。vesselCrossfadeStaged の finalOpts で最終段にも
+         渡せる。
+       - settle-then-fade（新設・n25専用）：VESSEL_KEYSが①同ファイルのまま位置だけ移動→②holdMs
+         待って別ファイルへin-placeクロスフェード、の2段。「茶碗が茶巾付きのまま座る→茶巾だけ消える」
+         のように、器自体は動かし、絵柄の消滅は器を動かさない、を両立する。
+       - crossfadeSwitch の motion.delay：開始（pick-upの発火）自体を遅らせられる（n32「柄杓が
+         据わってから茶筅が消え始める」の順序演出）。
+       - tremble を非VESSELキー（例：chasen_02の単独レイヤー）にも適用可能に。crossfadeSwitch側の
+         motion.trembleAfter で、据わり終わったタイミングを自動計算して震えを開始する（n32「点てる
+         震えは茶筅パーツだけ・茶碗本体は静止のまま」）。
+     ・instant=true（メニューからの大ジャンプ）時は、新規要素・既存要素とも一切アニメさせず
+       即座に最終姿勢へスナップする（旧実装は同ファイル位置替え・新規set-downがinstantを無視して
+       アニメしてしまうバグがあったため、2026-07-04に全パスへinstantガードを追加）。
+     ・MOTIONS: ステップn → パーツkey → 所作種別のデータ駆動マップ。値は文字列
+       'carry-in'/'soft-shift'/'slide-forward'/'set-down'、または
+       { type, dir:'left'|'bottom', rotateFrom, delay, from, mid, holdMs } のオブジェクト。
+       未指定の新規キーは既定で set-down、消えるキーは既定で pick-up、
+       VESSEL_KEYSの別ファイル切替は既定で vesselCrossfade になる。
+     ========================================================================== */
+  const VESSEL_KEYS = { furogama:1, mizusashi:1, chawan:1, natsume:1 };   // 据わっている器＝状態切替は必ずin-placeクロスフェード
+  const HISHAKU_Z = 999;                                                  // 柄杓は常に最前面（恒久固定）
+  function zForKey(key, pose){ return key==='hishaku' ? HISHAKU_Z : pose.z; }
+
+  const MOTIONS = {
+    2: { mizusashi: 'set-down' },                                                  // 水指：上からふわっとフェードで据わる（当主指示でcarry-inから変更）
+    3: { chawan: 'set-down', natsume: { type:'set-down', delay:250 } },            // 茶碗→棗の順（茶碗が先、250ms後に棗＝当主指示でcarry-inから変更）
+    4: { kensui: { type:'carry-in', dir:'left' } },                                // 建水は見切れ位置＝左下から
+    // 蓋置・柄杓は「建水から取り出して据える」近距離の所作＝set-down。柄杓は蓋置の着地を待つ直列シーケンス
+    5: { futaoki: 'set-down', hishaku: { type:'set-down', delay:1400, rotateFrom:-32 } },
+    6: { kensui: 'slide-forward' },                                                // 建水を膝の線へ、水平にすっと滑り出す（settleなし）
+    7: { chawan: 'soft-shift', natsume: 'snap' },                                  // 「茶碗を正面に出す」＝茶碗のみ動かす（straight-slide化）
+    8: { natsume: 'soft-shift' },                                                  // 「棗を出す」＝棗のみ動かす（straight-slide化）
+    // n9: 指定なし。棗はキー消滅→既定pick-upでふわっと消える（帛紗+両手の登場と自然につながる）。
+    //     茶碗は placements51.js 側の修正で n8 と同一ポーズ・同一ファイルのまま＝完全無変化（旧バグ修正）。
+    // n10: 指定なし。棗は既定set-downで再登場＝n9のpick-upと対になる「取る→置く」の2段所作。
+    // n11: 指定なし。茶碗(VESSEL)がcombo_setup→chasen_onlyへ別ファイル切替＝既定でvesselCrossfade。
+    //      位置固定のまま茶杓部分がふわっと消える（「帛紗の後、茶杓が取られるように消える」）。
+    // n12: 指定なし。棗(VESSEL)がclosed→combo_chashakuへ別ファイル切替＝既定でvesselCrossfade。
+    //      茶碗・棗とも位置不変のまま、茶杓だけがフェードで棗上に現れる。
+    13:{ chasen: 'set-down' },                                                     // 茶筅を取り出す（既定と同じだが明示）
+    14:{ chawan: 'soft-shift' },                                                   // 茶碗を手前に引く（straight-slide・バウンドなし）
+    // n16: 指定なし。釜(VESSEL)がclosed→openへ別ファイル切替＝既定でvesselCrossfade（上下動なし）。
+    16:{ kamabuta: { type:'soft-shift', from:{x:225,y:15,rotate:-18,scale:0.56} } }, // 釜蓋を持ち上げて蓋置へ（回転あり・やわらかく）
+    // n17: 指定なし。茶巾は「手に持ったものを釜蓋の上へ置く」近距離の所作＝既定set-down。
+    // n19: 釜(VESSEL)がopen→hishaku_comboへ別ファイル切替。「注いでいる柄杓が消えてから、置き柄杓が
+    //      現れる」順序にするため、柄杓キー消滅のpick-up(900ms)がほぼ終わってから釜のクロスフェードを開始。
+    19:{ chawan: 'soft-shift', furogama: { delay: 640 } },
+    // n20: 茶碗(VESSEL)がempty→chasen_only__n20へ別ファイル切替。「右上の茶筅が消えてから、茶碗が
+    //      その場フェードで茶筅入りの絵になる」順序にするため、茶筅キー消滅のpick-upを待ってから開始。
+    20:{ chawan: { delay: 640 } },
+    // n21: 指定なし。茶筅は既定set-downで再登場（img/23実測でサイズ・角度を修正、placements51.js参照）。
+    22:{ chawan: { type:'chawan-mawashi' }, chasen: 'soft-shift' },                // 茶碗を温める「回し」＝持ち上げ+左右揺らしの複合モーション（当主レビュー第2弾で全面改訂）
+    23:{ chawan: 'soft-shift' },                                                   // 湯を建水へあける（n22の浮いた位置から直接スタート）
+    // n24「茶巾で拭く」2026-07-04当主レビュー第4弾：タイミングを少し遅らせ、「茶碗が真ん中に
+    //      来た後に、茶巾が上からふわっとフェードで降りる（ゆったり）」を表現。二段クロスフェード
+    //      （vesselCrossfadeStaged）で、①まずbareのまま中央の持ち上げ位置(chawan.empty__n24＝
+    //      chawan.chakin_drapeと同じ座標・スケール、ファイルのみbare)へin-placeクロスフェード
+    //      （n23の建水寄り位置→中央）→②holdMs(500ms)待って、finalOpts(dropPx:35・durationMs:1800)
+    //      付きでchawan.chakin_drapeへ二度目のクロスフェード＝新要素が上方35pxからゆっくり(1800ms)
+    //      フェードインしながら降りてくる「ふわっと」の質感を追加した。
+    24:{ chawan: { mid:'chawan.empty__n24', holdMs:500, finalOpts:{ dropPx:35, durationMs:1800 } } },
+    // n25「定位置へ」2026-07-04当主レビュー第4弾：3段直列に刷新。
+    //      ①chawan(VESSEL)がn24の持ち上げ位置から、茶巾付きのまま同ファイル(chawan_04_chakin.png)
+    //      で座り位置の新規ポーズ(chawan.chakin_drape__n25seated)へ「移動」（settle-then-fade＝
+    //      softShiftと同じ直線補間・SOFTSHIFT_MS=1800ms）＝「茶碗が茶巾付きのまま下に据わる」。
+    //      ②holdMs(400ms)待ってから、bareのchawan.empty__n14へin-placeクロスフェード
+    //      （VESSEL_CROSSFADE_MS=900ms）＝「据わった後、茶碗から茶巾が消える」。
+    //      ③chakinキーがn25で新規登場（n24までは存在しない）＝既定のset-downで、①②が完了する
+    //      タイミング(1800+400+900=3100、余裕を見てdelay:3200)に合わせて、n17と同じ置き場所
+    //      (chakin.on_kamabuta＝釜蓋のつまみ手前)へ上からふわっと降りる＝「茶巾が釜蓋の上へ」。
+    25:{ chawan: { type:'settle-then-fade', mid:'chawan.chakin_drape__n25seated', holdMs:400 },
+         chakin: { delay: 3200 } },
+    // n26: 棗(VESSEL)がcombo_chashaku→open_matchaへ別ファイル切替。「茶杓が一旦上に上げながら消え、
+    //      その後で棗の絵柄が切り替わる」直列演出＝n29と同じ二段クロスフェードの仕組みを流用し、
+    //      中間状態(natsume.closed__n10＝茶杓が既に外れた閉じ姿)を経由してから開いた絵へ。
+    //      蓋(natsume_futa)はここで新規登場するパーツ＝既定だとdelay0で即座に降りてしまい、本体が
+    //      開く前に蓋だけ先に据わって見えるズレが生じていた（当主指摘・2026-07-04）。本体の最終
+    //      クロスフェード開始タイミング＝VESSEL_CROSSFADE_MS(900)+holdMs(450)=1350msに合わせて
+    //      蓋のset-downもdelay:1350で同時開始させ、「本体が開くのと同時に蓋が据わる」よう連動させる。
+    26:{ natsume: { mid:'natsume.closed__n10', holdMs:450 }, natsume_futa: { type:'set-down', delay:1350 } },
+    // n27「抹茶をすくう」2026-07-04当主レビュー第3弾：棗の移動(soft-shift)が完了してから茶杓
+    //      (抹茶入り)が現れる直列に変更。chashakuは新規登場＝既定set-downにdelay:1800
+    //      （natsumeのsoft-shift所要時間SOFTSHIFT_MSちょうど）を付け、棗が据わりきってから
+    //      茶杓が降りてくるようにした（旧：同時開始だったのを分離）。
+    27:{ natsume: 'soft-shift', chashaku: { type:'set-down', delay:1800 } },
+    // n28「抹茶を入れる」2026-07-04当主レビュー第3弾：既定のcrossfadeSwitch（pick-up→set-down）だと
+    //      茶杓が一旦上に浮いて消えてから降りてくる＝「入れる」動作として意味が逆に見える不具合
+    //      だった（当主指摘）。pour-tilt（新設）で、抹茶入りのままの姿でn27の位置→n28の位置
+    //      （茶碗方向へ寄せて下げ・rotateを+30°傾ける。placements51.js側でchashaku.empty_diagの
+    //      座標を修正済み）へ1.5秒で直線移動・傾け、到達したその場で空の茶杓(chashaku.empty_diag)
+    //      へインプレースでクロスフェード（vesselCrossfadeを流用・位置移動なし＝ジャンプしない）。
+    28:{ chashaku: { type:'pour-tilt' } },
+    30:{ chawan: 'soft-shift', mizusashi_futa: { type:'soft-shift', from:{x:828,y:175,rotate:0,scale:0.55} } }, // 水指の蓋を開けて立てかけ（水指本体はvesselCrossfadeで固定切替）
+    // n29「茶杓で縁を打つ→戻す」2026-07-04当主レビュー第3弾：完全直列の5段シーケンスに刷新。
+    //      ①chashaku(n28の位置から)が茶碗の縁近くへ移動（1300ms・ゆっくり）→②縁で「コン…
+    //      （間）…コン」と打つ（下へ8px・200ms×2、1打目と2打目の間に400msのタメ）→③pick-upで
+    //      消える（既定pickUp、900ms）。①〜③はremoved-keyループでmotionOf(n,key).type===
+    //      'rim-knock-exit'を検出してrimKnockExit()が丸ごと自前で処理する（chashakuはn29の
+    //      entry.partsに含まれないため通常は既定pick-upになるところを、このカスタム退場所作に
+    //      差し替える）。
+    //      2026-07-04当主レビュー第4弾：打つ位置(rimPose)を実測ベースで再計算。「茶杓の左端
+    //      （すくう部の先端、ローカル座標(35,545)）から全長の約1/6の点（ローカル座標(142,471)、
+    //      全長約780px）」が「茶碗(chawan.empty__n14: x664.5,y556,scale0.4501)の右縁（ローカル
+    //      座標(460,110)＝ステージ座標(871.5,605.5)）」に当たるよう、scale0.3・rotate38（旧値を
+    //      踏襲＝素材の対角線傾き(-34.8°)を打ち消して縁打ちに自然な水平に近い角度にする）を保った
+    //      まま、逆算でx,yを再計算した（旧値x672,y494は測ると縁から大きくズレていた）。
+    //      ④棗(VESSEL)がopen_matcha__n27→closed__n10（中間）→combo_chashaku（最終）の二段クロス
+    //      フェード＝「棗が閉じた姿へ→据わりきるのを待って→茶杓が棗上にフェードで戻る」を表現
+    //      （n12と同じ「絵の中に茶杓が現れる」パターンを流用＝⑤茶杓が棗の上へ戻る、に相当）。
+    //      delay:3400 = ①KNOCK_MOVE_MS(1300)+②KNOCK_MS(1200・コンコン計)+③PICKUP_MS(900)で、
+    //      ①〜③完了後に開始（全体がゆっくりになった分、旧2600から3400へ更新）。
+    //      2026-07-05当主レビュー第5弾：「コンコンの動きは最高、そのまま維持。ただし棗の蓋
+    //      (natsume_futa)がいきなり消えるのが問題」との指摘。旧実装はnatsume_futaキーがn29の
+    //      entry.partsに存在しない＝removed-keyループの既定pick-upが手の開始と同時（delay0）に
+    //      発火し、①②のコンコンの最中に蓋だけ先にふわっと消えてしまっていた。正しい直列は
+    //      ①コンコン（不変）→②コンコン完了後に蓋が消える→③その後、旧来どおり棗が閉じ姿へ
+    //      切り替わりながら茶杓が上に戻る。②の開始をdelay:2500（=KNOCK_MOVE_MS(1300)+
+    //      KNOCK_MS(1200)＝コンコン完了の瞬間）に設定＝蓋のpick-up(900ms)は2500〜3400msで進行し、
+    //      ちょうど③の棗クロスフェード開始(delay:3400)と同時に消え終わる＝「蓋が消えた直後に
+    //      棗が閉じ始める」という自然な受け渡しになる（removed-keyループ側でexitMotion.delayを
+    //      pick-upへ渡す機構を新設して対応。詳細はrenderParts内コメント参照）。
+    29:{
+      chashaku: { type:'rim-knock-exit', rimPose:{ x:925, y:468, rotate:38, scale:0.3, z:41 } },
+      natsume: { mid:'natsume.closed__n10', holdMs:520, delay:3400 },
+      natsume_futa: { delay:2500 }
+    },
+    // n31: 釜(VESSEL)がhishaku_combo→openへ別ファイル切替（既定vesselCrossfade、900ms・上下動なし）。
+    //      「釜の絵柄切替が完了してから湯を注ぐ」直列にするため、新規登場の柄杓(hishaku.pouring)の
+    //      set-downをVESSEL_CROSSFADE_MS(900ms)待ってから開始。「少しゆっくり」に合わせ、set-down自体の
+    //      duration も既定1600msよりやや長い2000msに。
+    31:{ hishaku: { delay: 900, duration: 2000 } },
+    // n32「茶筅で点てる」2026-07-04当主レビュー第4弾：柄杓の行き先・茶筅の表現方法を全面刷新。
+    //      ①柄杓：n31の standalone hishaku(hishaku.pouring)は既定pick-upで消え、furogama(VESSEL)が
+    //        open→hishaku_combo（＝釜の上に置かれた「置き柄杓」の絵。蓋置の上ではない）へ
+    //        in-placeクロスフェード。柄杓のpick-upが実質終わるタイミング(PICKUP_MS*
+    //        CROSSFADE_HANDOFF=630ms)を待ってから開始＝delay:640（n19と同じ考え方）。
+    //        （旧・hishaku.oki単体レイヤーで建水寄りに置く実装は撤去。当主指摘のとおり
+    //        「柄杓は釜の上」が正しい置き柄杓の絵）。
+    //      ②茶筅：棗の右のstandalone(chasen.standalone, chasen_01.png.png)は、①の柄杓の
+    //        クロスフェードが据わりきる(delay640+VESSEL_CROSSFADE_MS900=1540ms)のを待ってから
+    //        消え始める（crossfadeSwitchのmotion.delayで開始自体を遅らせる）。消えた後
+    //        （pick-up→CROSSFADE_HANDOFF）、当主支給の新パーツ chasen_02.png（点てる姿勢の
+    //        茶筅。placements51.js参照）が上から素早く（duration:550msの「ヒュッと」set-down）
+    //        茶碗の中へ降りてきて据わる。
+    //      ③点てる震え：chasen_02.pngのレイヤー自体がtremble()でその場に震える
+    //        （trembleAfter＝据わり終わるタイミングで自動的にtrembleDelayを算出）。
+    //        chawan(VESSEL)はn31と全く同じファイル・座標(chawan.empty__n18)のまま一切切り替え
+    //        ない＝完全に静止（旧：chawan.whiskingへの本体スワップで茶碗ごと震わせる方式は廃止）。
+    32:{
+      furogama: { delay: 640 },
+      chasen: { delay: 1540, duration: 550, trembleAfter: true }
+    },
+    /* v3 第33〜54手。既存の単体モーションを再利用しつつ、文言の一手単位へ合わせる。 */
+    33:{ chawan: { delay:2230 } },                                                // 点て上がり
+    34:{ chawan: { type:'return-from-guest' }, hishaku:{ delay:900, duration:1800 } },
+    35:{ chawan: 'soft-shift' },                                                  // すすぎ・温めて建水へ
+    36:{ chawan: { type:'respectful-pause' } },                                   // お仕舞いの挨拶
+    37:{ chawan: 'soft-shift', hishaku:{ delay:650, duration:1800 } },             // 水を茶碗へ
+    38:{ furogama:{ delay:640 }, chasen:{ delay:1540, duration:550, trembleAfter:true } },
+    39:{ chasen:{ delay:250 } },                                                   // 穂先を改めて戻す
+    40:{ chawan:'soft-shift' },                                                    // 水を建水へ
+    42:{ chawan:'soft-shift', mizusashi_futa:{ type:'soft-shift', from:{x:828,y:175,rotate:0,scale:0.55} } },
+    44:{ kensui:'soft-shift' },                                                    // 女点前は建水を先に下げる
+    46:{ natsume:'soft-shift' },                                                   // 中仕舞い・棗
+    47:{ chawan:'soft-shift' },                                                    // 中仕舞い・茶碗
+    48:{ hishaku:{ type:'two-pours-to-kama' } },                                  // 釜へ二杓
+    52:{ kensui:{ type:'carry-out-left' }, hishaku:{ type:'carry-out-left' }, futaoki:{ type:'carry-out-left' } },
+    53:{ chawan:{ type:'carry-out' }, natsume:{ type:'carry-out', delay:180 } },
+    54:{ mizusashi:{ type:'carry-out' } }
+  };
+  // n3のみ「ほぼ同時」に見せるための短いスタガー間隔（ms）。未指定の手は既定の350ms。
+  const STAGGER = { 3: 100 };
+  function motionOf(n, key){
+    const m = MOTIONS[n] && MOTIONS[n][key];
+    if(!m) return null;
+    return (typeof m === 'string') ? { type:m } : m;
+  }
+
+  let curLayers  = {};   // key -> img要素
+  let lastPose   = {};   // key -> 直近に確定したpose（連打スナップ・soft-shiftの起点に使用）
+  let activeAnim = {};   // key -> { anim: Animation, target: pose }（現在そのkeyを占有している要素の所作）
+  let orphanAnims = [];  // { anim, el } の配列。pick-up中（消滅確定・キーの占有からは既に外れた）要素の一覧。
+                          // 連打・大ジャンプ時に強制キャンセル＆即除去するための追跡。
+  let renderGen  = 0;    // renderParts()が呼ばれるたびに+1。setTimeoutで遅延実行するステージ演出
+                          // （vesselCrossfadeStaged等）が、実行時点でまだ同じ手のままかを確認するための世代番号。
+
+  function transformStr(x, y, rotate, scale){
+    return 'translate('+x+'px,'+y+'px) rotate('+(rotate||0)+'deg) scale('+scale+')';
+  }
+  function applyTransform(img, p){
+    img.style.transform = transformStr(p.x, p.y, p.rotate||0, p.scale);
+    img.style.opacity = '1';
+  }
+  function setFinalPose(key, el, pose){
+    applyTransform(el, pose);
+    lastPose[key] = pose;
+  }
+  // 連打対策：実行中のWAAPI所作アニメを即キャンセルし、そのアニメが向かっていた最終位置へスナップする。
+  function killActiveAnim(key){
+    const rec = activeAnim[key];
+    if(!rec) return;
+    try{ rec.anim.cancel(); }catch(e){}
+    delete activeAnim[key];
+    const el = curLayers[key];
+    if(el && rec.target) setFinalPose(key, el, rec.target);
+  }
+  // 大ジャンプ時：現在キーを占有中の所作アニメ、および pick-up 中で既に浮遊しているorphan要素の
+  // 両方を強制キャンセル・即時除去する（連打耐性・瞬時反映の両立に必須）。
+  function killAllAnimsInstant(){
+    Object.keys(activeAnim).forEach(k=>{ try{ activeAnim[k].anim.cancel(); }catch(e){} delete activeAnim[k]; });
+    orphanAnims.forEach(o=>{ try{ o.anim.cancel(); }catch(e){} if(o.el.parentNode) o.el.parentNode.removeChild(o.el); });
+    orphanAnims = [];
+    sweepOrphanElements();
+  }
+
+  /* sweepOrphanElements（2026-07-04当主レビュー第3弾新設・実機連打テストで発見した取りこぼし対策）：
+     rim-knock-exit等の多段WAAPIチェーン（onfinish連鎖）は、0msに近い超高速連打＋ブラウザのタブ
+     非アクティブ時のアニメーションタイムライン停止が重なる極端なケースで、まれにonfinishの発火
+     順序が想定と食い違い、curLayers・activeAnim・orphanAnimsのどれからも参照されない「完全に
+     迷子」の要素が#partsRoot直下に取り残されることが実機テストで確認された。renderParts()の
+     冒頭で毎回、#partsRootの子要素を curLayers の値集合／orphanAnims の要素集合と突き合わせ、
+     どちらにも属さない要素があれば安全側でアニメーションを止めて除去する。通常時はコストの低い
+     Set照合のみで、迷子が無ければ何もしない。
+     さらに実機連打テストでは、orphanAnims に登録済みのままアニメーション自体は playState
+     'finished' に達しているのに、そのonfinishコールバック（次段の開始／pick-up呼び出し／DOM
+     除去）が実行されず居残り続けるケースも確認された（タブ非表示中はイベント発火自体が抑制され
+     得るため）。これも「完了しているのに片付けを終えていない＝実質的な迷子」とみなし、
+     orphanAnims走査時に playState==='finished' のエントリはその場で強制的にDOM除去して配列
+     からも外す（本来のonfinishが後から遅れて呼ばれても、要素は既に無いだけで害はない）。 */
+  function sweepOrphanElements(){
+    const known = new Set(Object.values(curLayers));
+    orphanAnims = orphanAnims.filter(o => {
+      if(o.anim.playState === 'finished'){
+        if(o.el.parentNode) o.el.parentNode.removeChild(o.el);
+        return false;
+      }
+      known.add(o.el);
+      return true;
+    });
+    Array.from(partsRoot.children).forEach(el => {
+      if(!known.has(el)){
+        try{ el.getAnimations().forEach(a=>a.cancel()); }catch(e){}
+        if(el.parentNode) el.parentNode.removeChild(el);
+      }
+    });
+  }
+
+  /* 2026-07-03 実地レビュー第2弾：新モーション語彙の共通パラメータ。
+     「置く物は上からふわっと降りて据わる。取る物は少し浮いてふわっと消える。跳ねない。急がない。」 */
+  const EASE_INOUT    = 'cubic-bezier(.45,0,.2,1)';    // 移動：始点も終点も傾き0＝急発進・急停止なし
+  const EASE_OUT      = 'cubic-bezier(.22,.72,.32,1)'; // carry-inの着地寄り減速
+  const EASE_SOFT_OUT = 'cubic-bezier(.25,.6,.3,1)';   // set-down/pick-up：やわらかい減速
+  const SETDOWN_MS  = 1600;   // 置く：上方35px・opacity0 → フェードインしながら降りて据わる（バウンドなし）
+  const PICKUP_MS   = 900;    // 取る：上方25pxへ浮きながらフェードアウト
+  const SOFTSHIFT_MS = 1800;  // 短距離移動：わずかに浮く→なめらかな1本の弧→静かに据わる（settleバウンドなし）
+  const SLIDE_MS    = 1800;   // 水平にすっと滑り出す（n6建水）
+  const CROSSFADE_HANDOFF = 0.7; // 状態切替：旧要素のpick-upが70%進んだ時点で新要素のset-downを開始（同時ワープ回避）
+
+  /* set-down：新設。最終位置の上方35px・opacity 0 を起点に、フェードインしながらゆっくり降りて
+     据わる。バウンド／沈み込みなし。duration 1600ms、やわらかいease-out。
+     opts.rotateFrom を指定すると、回転しながら降りる小さな flourish を付けられる（任意）。
+     opts.duration を指定すると既定のSETDOWN_MSを上書きできる（例：n31「少しゆっくり」）。 */
+  function setDown(key, el, pose, opts, delayMs){
+    killActiveAnim(key);
+    el.classList.remove('tween','fade');
+    el.style.zIndex = zForKey(key, pose);
+    const rFrom = (opts && opts.rotateFrom != null) ? opts.rotateFrom : (pose.rotate||0);
+    const dur = (opts && opts.duration != null) ? opts.duration : SETDOWN_MS;
+    const startY = pose.y - 35;
+    const kf = [
+      { transform: transformStr(pose.x, startY, rFrom, pose.scale),          opacity:0, offset:0 },
+      { transform: transformStr(pose.x, pose.y, pose.rotate||0, pose.scale), opacity:1, offset:1 }
+    ];
+    const anim = el.animate(kf, { duration:dur, delay: delayMs||0, easing: EASE_SOFT_OUT, fill:'both' });
+    activeAnim[key] = { anim, target: pose };
+    anim.onfinish = () => {
+      if(activeAnim[key] && activeAnim[key].anim===anim){ setFinalPose(key, el, pose); anim.cancel(); delete activeAnim[key]; }
+    };
+  }
+
+  /* set-down-tremble（2026-07-04当主レビュー第2弾新設・n34「茶筅を置く」専用）：通常のset-down
+     （上方35px・opacity0から降りて据わる）に続けて、据わった直後にその場で細かく水平方向に
+     震える（±3〜5px・1.8秒）フラリッシュを追加する。震え終わったら必ずpose（元の姿勢）で静止。 */
+  const TREMBLE_MS = 1800;
+  function setDownTremble(key, el, pose, delayMs){
+    killActiveAnim(key);
+    el.classList.remove('tween','fade');
+    el.style.zIndex = zForKey(key, pose);
+    const x=pose.x, y=pose.y, r=pose.rotate||0, s=pose.scale;
+    const startY = y - 35;
+    const total = SETDOWN_MS + TREMBLE_MS;
+    const settleOffset = SETDOWN_MS/total;
+    const kf = [
+      { transform: transformStr(x, startY, r, s), opacity:0, offset:0 },
+      { transform: transformStr(x, y,      r, s), opacity:1, offset:settleOffset }
+    ];
+    // 震え区間：settleOffset〜1.0の間に振幅±3〜5pxで数回往復し、最後は振幅0（=pose）で終える
+    const tremble = [4,-5,4,-4,3,-4,3,-3,2,0];
+    tremble.forEach((amp,i) => {
+      const frac = (i+1)/tremble.length;
+      const off = settleOffset + frac*(1-settleOffset);
+      kf.push({ transform: transformStr(x+amp, y, r, s), opacity:1, offset: Math.min(1, off) });
+    });
+    const anim = el.animate(kf, { duration: total, delay: delayMs||0, easing: EASE_SOFT_OUT, fill:'both' });
+    activeAnim[key] = { anim, target: pose };
+    anim.onfinish = () => {
+      if(activeAnim[key] && activeAnim[key].anim===anim){ setFinalPose(key, el, pose); anim.cancel(); delete activeAnim[key]; }
+    };
+  }
+
+  /* pick-up：新設。その場から上方25pxへ浮きながらフェードアウト。duration 900ms。
+     このアニメを開始した時点で要素は「キーの占有」から外れているものとして扱う
+     （呼び出し側で curLayers[key] を先に更新／削除しておくこと）。完了時に onDone を呼ぶ。 */
+  function pickUp(el, fromPose, onDone, delayMs){
+    el.classList.remove('tween','fade');
+    const kf = [
+      { transform: transformStr(fromPose.x, fromPose.y,    fromPose.rotate||0, fromPose.scale), opacity:1, offset:0 },
+      { transform: transformStr(fromPose.x, fromPose.y-25, fromPose.rotate||0, fromPose.scale), opacity:0, offset:1 }
+    ];
+    const anim = el.animate(kf, { duration:PICKUP_MS, delay: delayMs||0, easing: EASE_SOFT_OUT, fill:'both' });
+    const rec = { anim, el };
+    orphanAnims.push(rec);
+    anim.onfinish = () => {
+      orphanAnims = orphanAnims.filter(o=>o!==rec);
+      if(onDone) onDone();
+    };
+    return anim;
+  }
+
+  /* carry-in：画面外（下端／建水は左下）から opacity 0 で入場 → 持たれた高さ（最終位置の上方30px）
+     を経由 → 最終位置へ下ろす。2026-07-03 第2弾：着地の沈み込み(settle)キーフレームを撤去し、
+     3点（出発・運搬中・着地）の単純な弧のみに簡素化＝バウンドなし。用途は「席に運び入れる」場面
+     （手2〜4）に限定。duration 2.6s、移動はease-in-out、着地はやわらかいease-out。 */
+  function carryIn(key, el, pose, opts, delayMs){
+    killActiveAnim(key);
+    el.classList.remove('tween','fade');
+    el.style.zIndex = zForKey(key, pose);
+
+    const dir    = (opts && opts.dir) || 'bottom';
+    const startX = dir==='left' ? pose.x - 170 : pose.x + 46;
+    const startY = dir==='left' ? pose.y + 120 : 950;               // 950=partsStage(高さ912)の外＝見えない
+    const rFrom  = (opts && opts.rotateFrom != null) ? opts.rotateFrom : (pose.rotate||0);
+    const carryY     = pose.y - 30;
+    const carryScale = pose.scale * 1.02;
+
+    const kf = [
+      { transform: transformStr(startX, startY, rFrom, pose.scale),               opacity:0, offset:0,   easing: EASE_INOUT },
+      { transform: transformStr(pose.x, carryY, pose.rotate||0, carryScale),      opacity:1, offset:0.6,  easing: EASE_SOFT_OUT },
+      { transform: transformStr(pose.x, pose.y, pose.rotate||0, pose.scale),      opacity:1, offset:1 }
+    ];
+    const anim = el.animate(kf, { duration:2600, delay: delayMs||0, fill:'both' });
+    activeAnim[key] = { anim, target: pose };
+    anim.onfinish = () => {
+      if(activeAnim[key] && activeAnim[key].anim===anim){ setFinalPose(key, el, pose); anim.cancel(); delete activeAnim[key]; }
+    };
+  }
+
+  /* 状態切替（同キー・別ファイル）用シーケンス。2026-07-04：VESSEL_KEYS（据わっている器）には
+     使用しない（vesselCrossfadeに一本化）。手道具のみが対象＝置き柄杓→構え柄杓 等、実際に手で
+     持ち替える所作の名残りとして pick-up→set-down の直列フローを維持する。
+     旧要素は pick-up でふわっと浮いて消え、消え切る前（CROSSFADE_HANDOFF=70%経過時点）に
+     新要素が set-down で降りて据わる＝同時ワープを避けた直列所作。 */
+  function crossfadeSwitch(key, oldEl, pose, motion){
+    killActiveAnim(key);
+    const fromPose = lastPose[key] || pose;
+    delete curLayers[key];
+    delete lastPose[key];
+    // 2026-07-04当主レビュー第4弾：motion.delay で開始そのものを遅らせられるようにした（例：n32の
+    // 茶筅＝「①置き柄杓が据わってから」その後に消え始める、の順序演出）。既定0＝従来どおり即開始。
+    const startDelay = (motion && motion.delay) || 0;
+    pickUp(oldEl, fromPose, ()=>{ if(oldEl.parentNode) oldEl.parentNode.removeChild(oldEl); }, startDelay);
+
+    const newEl = document.createElement('img');
+    newEl.className = 'p-layer';
+    newEl.src = 'parts/'+pose.part;
+    newEl.dataset.part = pose.part;
+    newEl.style.zIndex = zForKey(key, pose);
+    partsRoot.appendChild(newEl);
+    curLayers[key] = newEl;
+    const delay = startDelay + Math.round(PICKUP_MS * CROSSFADE_HANDOFF);
+    setDown(key, newEl, pose, motion, delay);
+  }
+
+  /* vesselCrossfade（2026-07-04新設）：VESSEL_KEYS（風炉釜・水指・茶碗・棗）専用。状態切替時に
+     絶対に上下させない・浮かせない、という当主レビューの最重要ルールに対応。旧要素・新要素とも
+     「その場（それぞれの最終姿勢の座標）」に固定したまま、opacityのみをクロスフェードする
+     ＝レイヤーを重ねてディゾルブする最も素直な「絵柄が切り替わる」表現。位置・スケール・回転の
+     移動は一切行わない（移動が必要な場合はsoft-shift/carry-inなど別のモーションと併用する）。
+     motion.delay を指定すると開始を遅らせられる（例：n19の「柄杓が消えてから」の順序演出）。 */
+  const VESSEL_CROSSFADE_MS = 900;
+  /* 2026-07-04当主レビュー第4弾：opts引数を追加。既定(opts省略)では従来どおり位置固定の純粋な
+     ディゾルブだが、opts.dropPx を指定すると「新要素だけ」が最終位置の上方dropPxからフェード
+     イン（setDownに似た、ゆっくり降りてくる質感）を付けられる（旧要素は従来どおりその場で
+     フェードアウトのみ・動かさない）。opts.durationMs で新要素側の所要時間を個別に変更できる
+     （旧要素は常にVESSEL_CROSSFADE_MS＝据わっている感を保つ）。n24「茶巾が上からふわっと
+     フェードで降りる（ゆったり）」専用に新設したが、他のVESSEL切替にも汎用的に使える。 */
+  function vesselCrossfade(key, oldEl, pose, delayMs, opts){
+    const fromPose = lastPose[key] || pose;
+    delete curLayers[key];
+    delete lastPose[key];
+
+    oldEl.classList.remove('tween'); oldEl.classList.add('fade');
+    const oldAnim = oldEl.animate(
+      [{ opacity:1, offset:0 }, { opacity:0, offset:1 }],
+      { duration:VESSEL_CROSSFADE_MS, delay: delayMs||0, easing:'ease-in-out', fill:'both' }
+    );
+    const rec = { anim:oldAnim, el:oldEl };
+    orphanAnims.push(rec);
+    oldAnim.onfinish = () => {
+      orphanAnims = orphanAnims.filter(o=>o!==rec);
+      if(oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+    };
+
+    const dropPx = (opts && opts.dropPx) || 0;
+    const newDur = (opts && opts.durationMs) || VESSEL_CROSSFADE_MS;
+    const newEl = document.createElement('img');
+    newEl.className = 'p-layer fade';
+    newEl.src = 'parts/'+pose.part;
+    newEl.dataset.part = pose.part;
+    newEl.style.zIndex = zForKey(key, pose);
+    partsRoot.appendChild(newEl);
+    curLayers[key] = newEl;
+    lastPose[key] = pose;
+    const newKf = dropPx>0 ? [
+      { transform: transformStr(pose.x, pose.y-dropPx, pose.rotate||0, pose.scale), opacity:0, offset:0 },
+      { transform: transformStr(pose.x, pose.y,        pose.rotate||0, pose.scale), opacity:1, offset:1 }
+    ] : [
+      { transform: transformStr(pose.x, pose.y, pose.rotate||0, pose.scale), opacity:0, offset:0 },
+      { transform: transformStr(pose.x, pose.y, pose.rotate||0, pose.scale), opacity:1, offset:1 }
+    ];
+    if(dropPx>0){ newEl.style.opacity='0'; } else { applyTransform(newEl, pose); newEl.style.opacity='0'; }
+    const newAnim = newEl.animate(newKf, { duration:newDur, delay: delayMs||0, easing: dropPx>0?EASE_SOFT_OUT:'ease-in-out', fill:'both' });
+    activeAnim[key] = { anim:newAnim, target:pose };
+    newAnim.onfinish = () => {
+      if(activeAnim[key] && activeAnim[key].anim===newAnim){ setFinalPose(key, newEl, pose); newAnim.cancel(); delete activeAnim[key]; }
+    };
+    return newEl;
+  }
+
+  /* vesselCrossfadeStaged（2026-07-04新設）：二段階の状態切替（例：n29「棗の蓋が閉じて据わって
+     から茶杓が置かれる」）。まず motion.mid の中間姿勢へin-placeクロスフェードし、据わりきって
+     から holdMs 待って最終姿勢へ二度目のクロスフェードを行う直列演出。連打・大ジャンプで途中の
+     キーが差し替わっていた場合は安全に処理を打ち切る。 */
+  /* 2026-07-04当主レビュー第4弾：finalOpts引数を追加。第2段（mid→finalPose）のvesselCrossfade
+     呼び出しにそのまま渡すことで、最終段だけ「上からふわっと」の質感(dropPx)や所要時間(durationMs)
+     を変えられる（n24「茶巾がゆったり降りる」専用）。省略時は従来どおり。 */
+  function vesselCrossfadeStaged(key, oldEl, finalPose, midPoseName, holdMs, delayMs, finalOpts){
+    const midPose = POSES[midPoseName];
+    if(!midPose){ vesselCrossfade(key, oldEl, finalPose, delayMs, finalOpts); return; }
+    const gen = renderGen;   // 発火時点の手の世代を記録（連打・大ジャンプで手が変わっていたら中断する）
+    vesselCrossfade(key, oldEl, midPose, delayMs||0);
+    const totalWait = (delayMs||0) + VESSEL_CROSSFADE_MS + (holdMs||0);
+    setTimeout(()=>{
+      if(gen !== renderGen) return;                               // 別の手へ既に移動済み＝中断
+      const midEl = curLayers[key];
+      if(!midEl || midEl.dataset.part !== midPose.part) return;  // 途中でジャンプ等により差し替わっていたら中断
+      killActiveAnim(key);
+      vesselCrossfade(key, midEl, finalPose, 0, finalOpts);
+    }, totalWait);
+  }
+
+  /* settle-then-fade（2026-07-04当主レビュー第4弾新設・n25「定位置へ」専用）：VESSEL_KEYS向けの
+     新パターン。同ファイルのまま位置だけ変える「①移動」（softShiftと同じ直線補間・SOFTSHIFT_MS）
+     →holdMs待つ→ファイルを切替える「②in-placeクロスフェード」（vesselCrossfade）、の2段直列。
+     既存のvesselCrossfadeStaged（クロスフェード→待ち→クロスフェード）と違い、第1段が「移動」で
+     ある点が異なる（n24で茶巾付きのまま持ち上げた位置にいる茶碗を、まず茶巾付きのまま座らせて
+     から、座った後で茶巾だけが消えるようにファイルを切替える＝「①茶碗が茶巾付きのまま下に
+     据わる→②据わった後、茶碗から茶巾が消える」を表現する）。
+     連打・大ジャンプで①の途中に割り込まれた場合はkillActiveAnim側の通常機構でスナップされ、
+     ②へは進まない（cancel時はonfinish不発火のため自然に安全側へ倒れる）。 */
+  function chawanSettleThenFade(key, el, seatedPose, finalPose, holdMs){
+    killActiveAnim(key);
+    el.classList.remove('tween','fade');
+    el.style.zIndex = zForKey(key, seatedPose);
+    const prev = lastPose[key] || seatedPose;
+    const kf = [
+      { transform: transformStr(prev.x, prev.y, prev.rotate||0, prev.scale), offset:0 },
+      { transform: transformStr(seatedPose.x, seatedPose.y, seatedPose.rotate||0, seatedPose.scale), offset:1 }
+    ];
+    const anim = el.animate(kf, { duration:SOFTSHIFT_MS, easing:EASE_INOUT, fill:'both' });
+    activeAnim[key] = { anim, target: seatedPose };
+    anim.onfinish = () => {
+      if(!(activeAnim[key] && activeAnim[key].anim===anim)) return;
+      setFinalPose(key, el, seatedPose);
+      delete activeAnim[key];
+      setTimeout(()=>{
+        if(curLayers[key] !== el) return;   // 連打・大ジャンプで既に差し替わっていたら中断
+        killActiveAnim(key);
+        vesselCrossfade(key, el, finalPose, 0);
+      }, holdMs||0);
+    };
+  }
+
+  /* soft-shift（straight-slide化）：2026-07-04当主レビューで「くの字」の中間apex（上に浮く折れ）を
+     完全撤去。出発姿勢→最終姿勢を2キーフレームのみで結ぶ直線的な補間に統一（ease-in-outで
+     ゆったりと・跳ねない・沈み込まない）。茶碗・棗などの短距離移動はすべてこの「スッと滑る」
+     動きになる。duration 1800ms。移動距離が視認できないほど小さい場合はアニメ自体を省略する。
+     新規登場パーツに対しても、事前に lastPose[key] へ疑似的な出発姿勢（motion.from）を
+     仕込んでから呼ぶことで「近くから持ち上げて据える」動き（例：釜蓋→蓋置）に流用できる。 */
+  /* 2026-07-04当主レビュー第4弾：delayMs・onDoneを追加（後方互換・省略可）。n32「茶筅が棗の右から
+     茶碗へ移動して入る」で、他の所作（釜の柄杓切替）の後に少し遅れて動き出させたり、移動完了後に
+     震え(tremble)を開始させたりするために使う。 */
+  function softShift(key, el, pose, delayMs, onDone){
+    killActiveAnim(key);
+    const prev = lastPose[key] || pose;
+    const dx = pose.x - prev.x, dy = pose.y - prev.y;
+    const dist = Math.hypot(dx, dy);
+    const rotDiff = Math.abs((pose.rotate||0) - (prev.rotate||0));
+    const scaleDiff = Math.abs(pose.scale - prev.scale);
+    el.classList.remove('tween','fade');
+    el.style.zIndex = zForKey(key, pose);
+    if(dist < 2 && rotDiff < 0.3 && scaleDiff < 0.002){
+      // 誤差程度の座標差＝アニメーション不要（微小な揺れを防ぐ）
+      setFinalPose(key, el, pose);
+      if(onDone) onDone();
+      return;
+    }
+    const kf = [
+      { transform: transformStr(prev.x, prev.y, prev.rotate||0, prev.scale), offset:0 },
+      { transform: transformStr(pose.x, pose.y, pose.rotate||0, pose.scale), offset:1 }
+    ];
+    const anim = el.animate(kf, { duration:SOFTSHIFT_MS, delay: delayMs||0, easing: EASE_INOUT, fill:'both' });
+    activeAnim[key] = { anim, target: pose };
+    anim.onfinish = () => {
+      if(activeAnim[key] && activeAnim[key].anim===anim){ setFinalPose(key, el, pose); anim.cancel(); delete activeAnim[key]; if(onDone) onDone(); }
+    };
+  }
+
+  /* chawan-mawashi（2026-07-04当主レビュー第2弾で全面改訂・n22専用）：「茶碗を温める回し」の複合
+     モーション。旧版はscale1.2・rotate-40°の大きな一回転で、回し終えたら元の位置へ戻していたが、
+     当主指示により「大回転はしない・上げた位置のまま保持」に変更。pose引数には placements51.js
+     側で新たに定義した「持ち上げ後の定位置」(n21から約40px上・scale1.1倍)を渡す前提。
+     lastPose[key]（=n21の静止姿勢）から出発し、①まず上げ切って（傾けなし）、②そこで左右に
+     ±10°前後の傾け揺らしを2〜3往復させ、③最後は傾き0で上げた位置のまま静止する。 */
+  function chawanMawashi(key, el, pose){
+    killActiveAnim(key);
+    el.classList.remove('tween','fade');
+    el.style.zIndex = zForKey(key, pose);
+    const prev = lastPose[key] || pose;
+    const x = pose.x, yTop = pose.y, s = pose.scale;   // pose = 持ち上げ後の定位置（最終姿勢）
+    const kf = [
+      { transform: transformStr(prev.x, prev.y, prev.rotate||0, prev.scale), offset:0    },
+      { transform: transformStr(x, yTop, 0,   s), offset:0.16 },  // 持ち上げ切る（傾けはまだ）
+      { transform: transformStr(x, yTop, 10,  s), offset:0.32 },  // 揺らし1往復目
+      { transform: transformStr(x, yTop, -10, s), offset:0.48 },
+      { transform: transformStr(x, yTop, 9,   s), offset:0.62 },  // 揺らし2往復目
+      { transform: transformStr(x, yTop, -9,  s), offset:0.76 },
+      { transform: transformStr(x, yTop, 5,   s), offset:0.90 },  // 揺らし3往復目（減衰）
+      { transform: transformStr(x, yTop, 0,   s), offset:1    }   // 上げた位置のまま静止
+    ];
+    const anim = el.animate(kf, { duration:6000, easing:EASE_INOUT, fill:'both' });   // 当主指示（2026-07-04）で3000→6000へ倍速緩和。角度・回数・最終静止位置は不変
+    activeAnim[key] = { anim, target: pose };
+    anim.onfinish = () => {
+      if(activeAnim[key] && activeAnim[key].anim===anim){ setFinalPose(key, el, pose); anim.cancel(); delete activeAnim[key]; }
+    };
+  }
+
+  /* slide-forward：n6の建水など「ポンと置く」settleの沈み込みや縦の弧を使わず、現在位置から
+     目的地まで水平に近い軌道で「すっと前に滑り出す」動き。縦方向の持ち上げ・着地沈み込みを
+     持たないシンプルな2キーフレームのtranslate補間で、加減速はsoft-shiftと同じ滑らかな
+     ease-in-outのみ。duration 1.8sでsoft-shiftと揃える。 */
+  function slideForward(key, el, pose){
+    killActiveAnim(key);
+    el.classList.remove('tween','fade');
+    el.style.zIndex = zForKey(key, pose);
+    const prev = lastPose[key] || pose;
+
+    const kf = [
+      { transform: transformStr(prev.x, prev.y, prev.rotate||0, prev.scale), offset:0 },
+      { transform: transformStr(pose.x, pose.y, pose.rotate||0, pose.scale), offset:1 }
+    ];
+    const anim = el.animate(kf, { duration:SLIDE_MS, easing: EASE_INOUT, fill:'both' });
+    activeAnim[key] = { anim, target: pose };
+    anim.onfinish = () => {
+      if(activeAnim[key] && activeAnim[key].anim===anim){ setFinalPose(key, el, pose); anim.cancel(); delete activeAnim[key]; }
+    };
+  }
+
+  /* v3：客側から返った茶碗を膝前へ取り込む。ヒーロー表示はその場で薄く消し、
+     通常の茶碗を右手側から最終位置へ滑らせる。 */
+  function returnFromGuest(key, oldEl, pose, delayMs){
+    const fromPose = lastPose[key] || pose;
+    delete curLayers[key];
+    delete lastPose[key];
+
+    const outAnim = oldEl.animate(
+      [
+        { transform:transformStr(fromPose.x,fromPose.y,fromPose.rotate||0,fromPose.scale), opacity:1 },
+        { transform:transformStr(fromPose.x-20,fromPose.y-15,fromPose.rotate||0,fromPose.scale*.96), opacity:0 }
+      ],
+      { duration:700, delay:delayMs||0, easing:EASE_INOUT, fill:'both' }
+    );
+    const rec = { anim:outAnim, el:oldEl };
+    orphanAnims.push(rec);
+    outAnim.onfinish = ()=>{
+      orphanAnims = orphanAnims.filter(item=>item!==rec);
+      if(oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+    };
+
+    const newEl = document.createElement('img');
+    newEl.className='p-layer';
+    newEl.src='parts/'+pose.part;
+    newEl.dataset.part=pose.part;
+    newEl.style.zIndex=zForKey(key,pose);
+    partsRoot.appendChild(newEl);
+    curLayers[key]=newEl;
+    lastPose[key]=pose;
+
+    const startX=1080, startY=pose.y-55;
+    const anim = newEl.animate(
+      [
+        { transform:transformStr(startX,startY,-8,pose.scale), opacity:0, offset:0 },
+        { transform:transformStr(930,pose.y-24,-4,pose.scale), opacity:1, offset:.45 },
+        { transform:transformStr(pose.x,pose.y,pose.rotate||0,pose.scale), opacity:1, offset:1 }
+      ],
+      { duration:2200, delay:(delayMs||0)+350, easing:EASE_INOUT, fill:'both' }
+    );
+    activeAnim[key]={anim,target:pose};
+    anim.onfinish=()=>{
+      if(activeAnim[key]&&activeAnim[key].anim===anim){ setFinalPose(key,newEl,pose); anim.cancel(); delete activeAnim[key]; }
+    };
+  }
+
+  /* v3：正客の言葉を受け、茶碗を膝前へ戻して一拍置く。 */
+  function respectfulPause(key, el, pose){
+    killActiveAnim(key);
+    const prev=lastPose[key]||pose;
+    el.style.zIndex=zForKey(key,pose);
+    const anim=el.animate(
+      [
+        { transform:transformStr(prev.x,prev.y,prev.rotate||0,prev.scale), offset:0 },
+        { transform:transformStr(pose.x,pose.y-10,pose.rotate||0,pose.scale), offset:.72 },
+        { transform:transformStr(pose.x,pose.y,pose.rotate||0,pose.scale), offset:1 }
+      ],
+      { duration:2400, easing:EASE_INOUT, fill:'both' }
+    );
+    activeAnim[key]={anim,target:pose};
+    anim.onfinish=()=>{
+      if(activeAnim[key]&&activeAnim[key].anim===anim){ setFinalPose(key,el,pose); anim.cancel(); delete activeAnim[key]; }
+    };
+  }
+
+  /* v3：水指と釜の間を二往復し、釜へ水を二杓さす。 */
+  function twoPoursToKama(key, el, pose){
+    killActiveAnim(key);
+    el.style.zIndex=zForKey(key,pose);
+    const source={x:720,y:65,r:4};
+    const target={x:pose.x,y:pose.y,r:pose.rotate||0};
+    const kf=[
+      {transform:transformStr(source.x,source.y,source.r,pose.scale),opacity:0,offset:0},
+      {transform:transformStr(source.x,source.y,source.r,pose.scale),opacity:1,offset:.08},
+      {transform:transformStr(target.x,target.y,target.r,pose.scale),opacity:1,offset:.27},
+      {transform:transformStr(target.x,target.y+8,target.r-4,pose.scale),opacity:1,offset:.36},
+      {transform:transformStr(source.x,source.y,source.r,pose.scale),opacity:1,offset:.55},
+      {transform:transformStr(target.x,target.y,target.r,pose.scale),opacity:1,offset:.76},
+      {transform:transformStr(target.x,target.y+8,target.r-4,pose.scale),opacity:1,offset:.87},
+      {transform:transformStr(target.x,target.y,target.r,pose.scale),opacity:1,offset:1}
+    ];
+    const anim=el.animate(kf,{duration:5200,easing:EASE_INOUT,fill:'both'});
+    activeAnim[key]={anim,target:pose};
+    anim.onfinish=()=>{
+      if(activeAnim[key]&&activeAnim[key].anim===anim){ setFinalPose(key,el,pose); anim.cancel(); delete activeAnim[key]; }
+    };
+  }
+
+  /* v3：持ち帰り。既定pick-upより大きく画面外へ運び、道具が退場したことを明確にする。 */
+  function carryOut(el, fromPose, onDone, opts){
+    const left=opts&&opts.dir==='left';
+    const delay=(opts&&opts.delay)||0;
+    const endX=left ? fromPose.x-300 : fromPose.x+70;
+    const endY=left ? fromPose.y+120 : 980;
+    const anim=el.animate(
+      [
+        {transform:transformStr(fromPose.x,fromPose.y,fromPose.rotate||0,fromPose.scale),opacity:1,offset:0},
+        {transform:transformStr(fromPose.x,fromPose.y-28,fromPose.rotate||0,fromPose.scale),opacity:1,offset:.25},
+        {transform:transformStr(endX,endY,fromPose.rotate||0,fromPose.scale),opacity:0,offset:1}
+      ],
+      {duration:2300,delay,easing:EASE_INOUT,fill:'both'}
+    );
+    const rec={anim,el}; orphanAnims.push(rec);
+    anim.onfinish=()=>{
+      orphanAnims=orphanAnims.filter(item=>item!==rec);
+      if(onDone) onDone();
+    };
+    return anim;
+  }
+
+  /* pour-tilt（2026-07-04当主レビュー第3弾新設・第4弾で全面改訂・n28「抹茶を入れる」専用）：
+     手道具(chashaku)の状態切替を、既定のcrossfadeSwitch（浮いて消える→上から降りてくる＝「上がる」
+     ように見えて意味が逆になる）ではなく、3段の直列モーションで表現する。
+     第4弾の指摘：旧実装は「現位置→最終位置まで一気に1.5秒で移動しながらrotateを最終角(30°)まで
+     傾ける」1段構成だったが、静止姿勢が30°では「傾きすぎ」に見えるうえ、「入れる」動作の途中経過
+     が表現できていなかった。以下の3段に変更：
+       ① TILT：現在のファイル（抹茶入り）のまま、現在位置から最終位置(finalPoseのx,y)へ向かう
+          経路の途中（4割地点）まで進みながら、少しだけ傾ける（rotate: TILT_DEG=11°、
+          「10〜12度程度」の指示に対応）。まだ抹茶入りの絵のまま。
+       ② RETURN：残りの経路を最終位置まで進みながら、rotateを元の角度（n27と同じ0°）へ戻す。
+          「戻すときに空の茶杓へ切り替え」の指示どおり、この段階でファイルを空の茶杓
+          （finalPose.part）へインプレースのクロスフェード（同じ要素の移動に、別要素の
+          フェードイン／アウトを重ねる）として同時に行う＝「傾けて→戻す→戻りながら空に」。
+     連打・大ジャンプで途中に割り込まれた場合はkillActiveAnim側の通常機構でスナップされ、
+     以降の段へは進まない（onfinishはWAAPIの仕様上cancel時に発火しないため、自然に安全側へ倒れる）。 */
+  const TILT_MS = 700;      // ①少し傾ける
+  const RETURN_MS = 1100;   // ②元の角度へ戻しながら空の茶杓へクロスフェード
+  const TILT_DEG = 11;      // 「10〜12度程度」
+  function pourTiltCrossfade(key, oldEl, finalPose, delayMs){
+    killActiveAnim(key);
+    oldEl.classList.remove('tween','fade');
+    oldEl.style.zIndex = zForKey(key, finalPose);
+    const prev = lastPose[key] || finalPose;
+
+    // ①少し傾ける：経路の4割地点まで進みつつ、rotateをTILT_DEGへ
+    const tiltPose = {
+      x: prev.x + (finalPose.x - prev.x) * 0.4,
+      y: prev.y + (finalPose.y - prev.y) * 0.4,
+      rotate: TILT_DEG,
+      scale: prev.scale
+    };
+    const kf1 = [
+      { transform: transformStr(prev.x, prev.y, prev.rotate||0, prev.scale), offset:0 },
+      { transform: transformStr(tiltPose.x, tiltPose.y, tiltPose.rotate, tiltPose.scale), offset:1 }
+    ];
+    const anim1 = oldEl.animate(kf1, { duration:TILT_MS, delay: delayMs||0, easing: EASE_INOUT, fill:'both' });
+    activeAnim[key] = { anim:anim1, target: tiltPose };
+    anim1.onfinish = () => {
+      if(!(activeAnim[key] && activeAnim[key].anim===anim1)) return;
+      setFinalPose(key, oldEl, tiltPose);
+      delete activeAnim[key];
+
+      // ②元の角度へ戻しながら最終位置まで移動＋空の茶杓へインプレースのクロスフェード
+      killActiveAnim(key);
+      delete curLayers[key];
+      delete lastPose[key];
+      oldEl.classList.remove('tween'); oldEl.classList.add('fade');
+      const oldAnim2 = oldEl.animate(
+        [{ opacity:1, offset:0 }, { opacity:0, offset:1 }],
+        { duration:RETURN_MS, easing:'ease-in-out', fill:'both' }
+      );
+      const rec = { anim:oldAnim2, el:oldEl };
+      orphanAnims.push(rec);
+      oldAnim2.onfinish = () => {
+        orphanAnims = orphanAnims.filter(o=>o!==rec);
+        if(oldEl.parentNode) oldEl.parentNode.removeChild(oldEl);
+      };
+
+      const newEl = document.createElement('img');
+      newEl.className = 'p-layer fade';
+      newEl.src = 'parts/'+finalPose.part;
+      newEl.dataset.part = finalPose.part;
+      newEl.style.zIndex = zForKey(key, finalPose);
+      partsRoot.appendChild(newEl);
+      curLayers[key] = newEl;
+      const kf2 = [
+        { transform: transformStr(tiltPose.x, tiltPose.y, tiltPose.rotate, tiltPose.scale), opacity:0, offset:0 },
+        { transform: transformStr(finalPose.x, finalPose.y, finalPose.rotate||0, finalPose.scale), opacity:1, offset:1 }
+      ];
+      const anim2 = newEl.animate(kf2, { duration:RETURN_MS, easing: EASE_SOFT_OUT, fill:'both' });
+      activeAnim[key] = { anim:anim2, target: finalPose };
+      anim2.onfinish = () => {
+        if(!(activeAnim[key] && activeAnim[key].anim===anim2)) return;
+        setFinalPose(key, newEl, finalPose);
+        delete activeAnim[key];
+      };
+    };
+  }
+
+  /* rim-knock-exit（2026-07-04当主レビュー第3弾新設・第4弾でリズム全面改訂・n29「茶杓で縁を打つ→
+     戻す」専用）：手道具（chashaku）の退場を、既定のpick-up（その場でふわっと消える）ではなく
+     ①茶碗の縁近くへ移動（1300ms・straight-slide・ゆっくり）→②縁で「コン…（間）…コン」と
+     打つ（下へ8px→戻るを200ms×2回、1打目と2打目の間に400msのタメ）→③既定のpickUp()で消える、
+     の3段直列で表現する。
+     2026-07-04当主レビュー第3弾・実機連打テストで発見した不具合を2点修正：
+       ①killActiveAnim(key)は内部でcurLayers[key]を参照してスナップ先要素を探すため、
+         curLayers/lastPoseを削除する【前】に必ず呼ぶ（削除後に呼ぶと要素が見つからずスナップが
+         スキップされ、直前の所作の見た目が中途半端な位置に戻ってしまうバグがあった）。
+       ②本関数の①②段（移動・コンコン）を旧実装ではactiveAnim[key]で追跡していたが、これは
+         「curLayersを現在占有している要素」専用のスロットのため、退場中（curLayersからは既に
+         削除済み）の要素がここを使うと、直後に同じキーで新規登場した別要素のactiveAnim[key]書き
+         込みに上書きされてcancel()されないまま取り残される＝退場アニメが独立して走り続け、
+         新要素と一時的に二重表示される不具合があった（連打で n29→n28 のように戻った直後に発生）。
+         pick-up()と同じ「要素参照ベースのorphanAnims配列」で追跡することで、curLayers上の別要素と
+         スロットが衝突しないようにした（killAllAnimsInstant側は元々activeAnim/orphanAnims両方を
+         見て強制キャンセルするため、大ジャンプ時の即時停止は従来どおり機能する）。 */
+  /* 2026-07-04 当主レビュー第4弾：n29「コンコン」を全面的にゆっくり・タメのあるリズムへ変更。
+       - 移動（①）：1000ms→1300ms（全体をもっとゆっくり、の指示）。
+       - 打つ位置：茶杓の左端(=すくう部の先端)から全長の約1/6の点が、茶碗（chawan.empty__n14）
+         の右縁に当たるよう、rimPose(x,y)を実測ベースで再計算（旧値は的外れな位置だった）。
+       - リズム：連打的な「コン・コン」（150ms×2・間100ms＝計700ms）をやめ、「コン…（間）…コン」
+         （1打ずつ200ms下げ+200ms戻し＝400ms、その後400msのタメ、再び400ms＝計1200ms）に変更。 */
+  const KNOCK_MOVE_MS = 1300;
+  const KNOCK_MS = 1200;
+  function rimKnockExit(key, motion){
+    const el = curLayers[key];
+    const fromPose = lastPose[key];
+    if(!el || !fromPose){ return false; }   // 保険：取得できなければ既定処理（呼び出し側）に委ねる
+    const rimPose = motion.rimPose;
+    killActiveAnim(key);                    // ←必ず delete curLayers/lastPose より先に呼ぶ
+    delete curLayers[key];
+    delete lastPose[key];
+    el.classList.remove('tween','fade');
+    el.style.zIndex = zForKey(key, rimPose);
+
+    // ①縁近くへ移動（1300ms・ゆっくり）
+    const moveKf = [
+      { transform: transformStr(fromPose.x, fromPose.y, fromPose.rotate||0, fromPose.scale), offset:0 },
+      { transform: transformStr(rimPose.x, rimPose.y, rimPose.rotate||0, rimPose.scale), offset:1 }
+    ];
+    const moveAnim = el.animate(moveKf, { duration:KNOCK_MOVE_MS, easing:EASE_INOUT, fill:'both' });
+    const rec1 = { anim: moveAnim, el };
+    orphanAnims.push(rec1);
+    moveAnim.onfinish = () => {
+      orphanAnims = orphanAnims.filter(o=>o!==rec1);
+      applyTransform(el, rimPose);
+
+      // ②「コン…（間）…コン」：1打目(下げ200ms+戻し200ms)→タメ400ms→2打目(下げ200ms+戻し200ms)＝計1200ms
+      const kx=rimPose.x, ky=rimPose.y, kr=rimPose.rotate||0, ks=rimPose.scale;
+      const knockKf = [
+        { transform: transformStr(kx, ky,   kr, ks), offset:0      },
+        { transform: transformStr(kx, ky+8, kr, ks), offset:0.1667 },  // コン1：下げ切る(200ms)
+        { transform: transformStr(kx, ky,   kr, ks), offset:0.3333 },  // 戻る(200ms)
+        { transform: transformStr(kx, ky,   kr, ks), offset:0.6667 },  // タメ（間）400ms
+        { transform: transformStr(kx, ky+8, kr, ks), offset:0.8333 },  // コン2：下げ切る(200ms)
+        { transform: transformStr(kx, ky,   kr, ks), offset:1      }   // 戻る(200ms)
+      ];
+      const knockAnim = el.animate(knockKf, { duration:KNOCK_MS, easing:'ease-in-out', fill:'both' });
+      const rec2 = { anim: knockAnim, el };
+      orphanAnims.push(rec2);
+      knockAnim.onfinish = () => {
+        orphanAnims = orphanAnims.filter(o=>o!==rec2);
+        applyTransform(el, rimPose);
+
+        // ③既定のpick-upで消える（pick-up自体も元からorphanAnims追跡＝一貫した扱い）
+        pickUp(el, rimPose, ()=>{ if(el.parentNode) el.parentNode.removeChild(el); });
+      };
+    };
+    return true;
+  }
+
+  /* tremble（2026-07-04当主レビュー第3弾新設・n32「茶筅で点てる」専用）：既に画面に存在する要素を、
+     「上から降りて据わる」導入部を持たずその場で細かく水平方向に震わせる（±3〜5px＝
+     setDownTrembleの震え部分のみを独立させたもの）。震え終わったら必ずpose（元の姿勢）で静止する。
+     2026-07-05当主レビュー第5弾：①震え時間を+50%（1800ms→2700ms）に延長。②「最初は速い
+     シャカシャカ（高周波・振幅大きめ）→後半ゆっくり（周波数・振幅を漸減）→自然に減速して止まる」
+     テンポのエンベロープを追加。beats配列は各打の振幅(amp)と所要時間(dur)を持ち、前半180ms周期
+     ×6打（振幅5〜6px）→中盤360ms周期×3打（振幅1〜3pxへ漸減）→終盤540ms・振幅0（静止）の
+     10打構成（180*6+360*3+540=2700msちょうど）。等間隔offsetをやめ、各打の実時間を積み上げた
+     offsetをWAAPIキーフレームに指定することで、均一テンポだった旧実装を可変テンポ化した。 */
+  const TREMBLE_ONLY_MS = 2700;
+  const TREMBLE_BEATS = [
+    { amp:5,  dur:180 }, { amp:-6, dur:180 }, { amp:5,  dur:180 },
+    { amp:-5, dur:180 }, { amp:4,  dur:180 }, { amp:-4, dur:180 },  // 前半：速い（180ms周期）・振幅大きめ
+    { amp:3,  dur:360 }, { amp:-2, dur:360 }, { amp:1,  dur:360 },  // 中盤：やや遅く（360ms周期）・振幅漸減
+    { amp:0,  dur:540 }                                              // 終盤：ゆっくり（540ms）・静止で減速終了
+  ];
+  function tremble(key, el, pose, delayMs){
+    killActiveAnim(key);
+    el.classList.remove('tween','fade');
+    el.style.zIndex = zForKey(key, pose);
+    const x=pose.x, y=pose.y, r=pose.rotate||0, s=pose.scale;
+    const kf = [ { transform: transformStr(x,y,r,s), opacity:1, offset:0 } ];
+    let acc = 0;
+    TREMBLE_BEATS.forEach(b => {
+      acc += b.dur;
+      kf.push({ transform: transformStr(x+b.amp, y, r, s), opacity:1, offset: Math.min(1, acc/TREMBLE_ONLY_MS) });
+    });
+    const anim = el.animate(kf, { duration:TREMBLE_ONLY_MS, delay: delayMs||0, easing: EASE_SOFT_OUT, fill:'both' });
+    activeAnim[key] = { anim, target: pose };
+    anim.onfinish = () => {
+      if(activeAnim[key] && activeAnim[key].anim===anim){ setFinalPose(key, el, pose); anim.cancel(); delete activeAnim[key]; }
+    };
+  }
+  /* trembleAfter用の予約実行。VESSELのvesselCrossfade完了を待ってからtremble()を発火させる。
+     setTimeoutのみで管理し、renderGenで発火時点の手が変わっていないか・要素が想定のファイルの
+     ままかを確認してから実行する（連打・大ジャンプ時は静かに何もしない＝安全側）。 */
+  function scheduleTrembleAfterCrossfade(key, pose, waitMs){
+    const gen = renderGen;
+    setTimeout(()=>{
+      if(gen !== renderGen) return;
+      const el = curLayers[key];
+      if(!el || el.dataset.part !== pose.part) return;
+      tremble(key, el, pose, 0);
+    }, waitMs);
+  }
+
+  function renderParts(n, instant){
+    renderGen++;
+    const entry = PLSTEPS[n];
+    if(!entry || entry.fallback){ partsStage.classList.remove('show'); return; }
+    partsStage.classList.add('show');
+    sweepOrphanElements();   // 毎回冒頭で迷子要素を掃除（詳細はsweepOrphanElements定義部のコメント参照）
+
+    if(instant){
+      // ジャンプ時は実行中の所作アニメ（占有中・pick-up中のorphan両方）を即キャンセル（この後no-animで瞬時反映）
+      killAllAnimsInstant();
+      partsRoot.classList.add('no-anim');
+    }
+
+    const want = {};
+    entry.parts.forEach(pt=>{ want[pt.key]=pt.pose; });
+
+    // 同じ手で複数パーツが carry-in する場合の順番（entry.parts の記載順）→ STAGGER[n]（既定350ms）でスタガー
+    // ※ motion.delay が明示されたパーツ（例：n5の柄杓）はこの並び順を使わず個別の遅延で開始する
+    const carryOrder = [];
+    if(!instant){
+      entry.parts.forEach(pt=>{
+        const isNew = !(pt.key in curLayers);
+        const m = motionOf(n, pt.key);
+        if(isNew && m && m.type==='carry-in') carryOrder.push(pt.key);
+      });
+    }
+
+    // 消えたキー → 既定は pick-up（少し浮いてふわっと消える）。instant時は即除去。
+    // 2026-07-04当主レビュー第3弾：n29のchashakuのようにカスタム退場所作（rim-knock-exit等）が
+    // MOTIONS[n][key] に指定されている場合は、それを優先して丸ごとその関数に処理を委ねる
+    // （関数側でcurLayers/lastPoseの後始末まで行う）。
+    // 2026-07-05当主レビュー第5弾：exitMotion.delay で既定pick-upの開始そのものを遅らせられる
+    // ようにした（n29「棗の蓋(natsume_futa)がコンコン完了前に消えてしまう」バグ対応。旧実装は
+    // exitMotionをrim-knock-exit判定にしか使っておらず、delayが指定されていても無視してpick-upを
+    // 即時開始していた）。
+    Object.keys(curLayers).forEach(key=>{
+      if(!(key in want)){
+        const exitMotion = instant ? null : motionOf(n, key);
+        if(exitMotion && exitMotion.type==='rim-knock-exit'){
+          if(rimKnockExit(key, exitMotion)) return;
+        }
+        killActiveAnim(key);
+        const el = curLayers[key];
+        const fromPose = lastPose[key] || null;
+        delete curLayers[key];
+        delete lastPose[key];
+        if(instant){
+          if(el.parentNode) el.parentNode.removeChild(el);
+        } else if(fromPose){
+          const remove=()=>{ if(el.parentNode) el.parentNode.removeChild(el); };
+          if(exitMotion && (exitMotion.type==='carry-out' || exitMotion.type==='carry-out-left')){
+            carryOut(el,fromPose,remove,{...exitMotion,dir:exitMotion.type==='carry-out-left'?'left':'bottom'});
+          } else {
+            const exitDelay = (exitMotion && exitMotion.delay) || 0;
+            pickUp(el, fromPose, remove, exitDelay);
+          }
+        } else {
+          // フォールバック（万一 fromPose が取得できない場合）：単純フェードアウト
+          el.classList.add('fade'); el.style.opacity = '0';
+          setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); }, 500);
+        }
+      }
+    });
+
+    // 追加・更新
+    Object.keys(want).forEach(key=>{
+      const poseName = want[key];
+      const pose = POSES[poseName];
+      if(!pose) return;
+      let el = curLayers[key];
+      const motion = instant ? null : motionOf(n, key);
+
+      if(!el){
+        el = document.createElement('img');
+        el.style.zIndex = zForKey(key, pose);
+        el.src = 'parts/'+pose.part;
+        el.dataset.part = pose.part;
+        el.className = 'p-layer';
+        partsRoot.appendChild(el);
+        curLayers[key] = el;
+
+        if(instant){
+          // 2026-07-04修正：大ジャンプ／初期表示では新規パーツも一切アニメさせず即座に最終姿勢へ
+          // （旧実装はここでset-down等が無条件に走り、「n1で釜がふわっと降りてくる」バグの原因だった）。
+          setFinalPose(key, el, pose);
+        } else if(motion && motion.type==='carry-in'){
+          // motion.delay が明示されていればそれを優先（例：n5の柄杓＝蓋置の着地完了を待って開始）。
+          // 未指定なら同じ手で複数パーツが carry-in する場合の順番（entry.parts の記載順）でスタガー。
+          let delay;
+          if(motion.delay != null){
+            delay = motion.delay;
+          } else {
+            const stagger = (STAGGER[n] != null) ? STAGGER[n] : 350;
+            delay = carryOrder.indexOf(key) * stagger;
+          }
+          carryIn(key, el, pose, motion, Math.max(0,delay));
+        } else if(motion && motion.type==='soft-shift'){
+          // 新規登場パーツを soft-shift で動かす場合：motion.from を疑似的な出発姿勢として
+          // 仕込んでから通常の softShift を呼ぶ（例：釜蓋を持ち上げて蓋置へ・水指の蓋を開けて立てかけ）。
+          const f = motion.from || {};
+          lastPose[key] = {
+            x: f.x!=null ? f.x : pose.x,
+            y: f.y!=null ? f.y : pose.y,
+            rotate: f.rotate!=null ? f.rotate : (pose.rotate||0),
+            scale: f.scale!=null ? f.scale : pose.scale
+          };
+          softShift(key, el, pose);
+        } else if(motion && motion.type==='slide-forward'){
+          // 新規登場パーツを slide-forward で動かす場合：motion.from を疑似的な出発姿勢として仕込む。
+          const f = motion.from || {};
+          lastPose[key] = {
+            x: f.x!=null ? f.x : pose.x,
+            y: f.y!=null ? f.y : pose.y,
+            rotate: f.rotate!=null ? f.rotate : (pose.rotate||0),
+            scale: f.scale!=null ? f.scale : pose.scale
+          };
+          slideForward(key, el, pose);
+        } else if(motion && motion.type==='two-pours-to-kama'){
+          twoPoursToKama(key,el,pose);
+        } else if(motion && motion.type==='set-down-tremble'){
+          // n34の茶筅専用：置いた直後にその場で細かく震える
+          const delay = (motion.delay != null) ? motion.delay : 0;
+          setDownTremble(key, el, pose, delay);
+        } else {
+          // 既定：set-down（最終位置の上方35px・opacity0から、フェードインしながら降りて据わる）
+          const delay = (motion && motion.delay != null) ? motion.delay : 0;
+          setDown(key, el, pose, motion, delay);
+        }
+      } else {
+        killActiveAnim(key);
+        if(instant){
+          // 2026-07-04修正：大ジャンプでは同ファイル位置替え・状態切替とも一切アニメさせず即時反映
+          el.classList.remove('tween','fade');
+          el.src='parts/'+pose.part; el.dataset.part=pose.part; el.style.zIndex=zForKey(key,pose);
+          setFinalPose(key, el, pose);
+        } else if(el.dataset.part !== pose.part){
+          if(VESSEL_KEYS[key]){
+            // ①最重要ルール：据わっている器は状態切替時に絶対上下させない＝in-placeクロスフェード
+            const delay = (motion && motion.delay) || 0;
+            if(motion && motion.type==='return-from-guest'){
+              returnFromGuest(key,el,pose,motion.delay||0);
+            } else if(motion && motion.type==='settle-then-fade'){
+              // n25専用：①茶巾付きのまま同ファイルで座ってから②bareへin-placeクロスフェード
+              chawanSettleThenFade(key, el, POSES[motion.mid], pose, motion.holdMs||0);
+            } else if(motion && motion.mid){
+              vesselCrossfadeStaged(key, el, pose, motion.mid, motion.holdMs||500, delay, motion.finalOpts);
+            } else {
+              vesselCrossfade(key, el, pose, delay, motion && motion.dropOpts);
+              if(motion && motion.trembleAfter){
+                // n32専用：クロスフェードで据わった後、その場で細かく震える（点てる表現）
+                const wait = (motion.trembleDelay != null) ? motion.trembleDelay : (delay + VESSEL_CROSSFADE_MS);
+                scheduleTrembleAfterCrossfade(key, pose, wait);
+              }
+            }
+          } else if(motion && motion.type==='pour-tilt'){
+            // n28専用：抹茶入りのまま茶碗方向へ寄せ下げ+傾け→到達点でインプレースのクロスフェード
+            pourTiltCrossfade(key, el, pose, motion.delay||0);
+          } else {
+            // 手道具の状態切替（例：柄杓の構え違い）：pick-up→set-downの直列所作を維持
+            crossfadeSwitch(key, el, pose, motion);
+            if(motion && motion.trembleAfter){
+              // n32専用：棗の右のstandalone茶筅が消えた後、chasen_02.pngが上からヒュッと降りて
+              // 茶碗の中に据わり、そのまま震える（点てる表現。茶碗本体は一切動かさない）。
+              const startDelay = (motion.delay) || 0;
+              const handoff = Math.round(PICKUP_MS * CROSSFADE_HANDOFF);
+              const setDownDur = (motion.duration != null) ? motion.duration : SETDOWN_MS;
+              const wait = (motion.trembleDelay != null) ? motion.trembleDelay : (startDelay + handoff + setDownDur);
+              scheduleTrembleAfterCrossfade(key, pose, wait);
+            }
+          }
+        } else if(motion && motion.type==='respectful-pause'){
+          respectfulPause(key,el,pose);
+        } else if(motion && motion.type==='chawan-mawashi'){
+          // n22専用：拡大＋反時計回転の複合モーション（温めの回し）
+          chawanMawashi(key, el, pose);
+        } else if(motion && motion.type==='soft-shift'){
+          softShift(key, el, pose);
+        } else if(motion && motion.type==='slide-forward'){
+          slideForward(key, el, pose);
+        } else if(motion && motion.type==='snap'){
+          // 所作の意味上「動かさない」パーツ：アニメ無しで即座に最終姿勢へ（例：n7の棗）
+          el.classList.remove('tween','fade');
+          el.style.zIndex = zForKey(key, pose);
+          setFinalPose(key, el, pose);
+        } else {
+          // 既定：同ファイル・座標のみ変化 → soft-shift（straight-slide。誤差程度の差ならアニメ省略）
+          el.style.zIndex = zForKey(key, pose);
+          softShift(key, el, pose);
+        }
+      }
+    });
+
+    if(instant){
+      // 強制リフローでno-anim状態の適用を確定させてから外し、以降は通常のアニメに戻す
+      // （requestAnimationFrameは非アクティブタブ等でスロットルされ得るため使わない）
+      void partsRoot.offsetWidth;
+      partsRoot.classList.remove('no-anim');
+    }
+  }
+
+  const drawerScroll=$('drawerScroll');
+  function replay(){ drawerScroll.classList.remove('anim'); void drawerScroll.offsetWidth; drawerScroll.classList.add('anim'); }
+
+  function render(jumpInstant){
+    const s=STEPS[cur]; if(!s) return;
+    const p=phaseById[s.phase]||{label:''};
+    renderParts(s.n, !!jumpInstant);
+    $('origLink').href = s.img;
+    $('ePhase').textContent=p.label; $('eTe').textContent=s.te||''; $('eTitle').textContent=s.title;
+    $('eText').innerHTML = (s.n>=33 ? s.text : ENRICH[s.n]) || s.text || '';
+    $('ePoint').textContent = s.note || KOKOROE[s.n] || '';
+    const onna=$('eOnna'); if(s.onna){ onna.style.display=''; onna.textContent=s.onna; } else onna.style.display='none';
+    const tools=$('eTools'); tools.innerHTML='';
+    (s.tools||[]).forEach(t=>{ const c=document.createElement('span'); c.className='tool';
+      const id=TOOL_ICON[t]; c.innerHTML=(id?'<svg class="ti"><use href="#tt-'+id+'"/></svg>':'')+t; tools.appendChild(c); });
+    const td=tipFor(s.n);
+    if(td){ $('tipCat').textContent=td.category||'豆知識'; $('tipTt').textContent=td.title||''; $('tipTx').textContent=td.text||''; }
+    $('footT').textContent=s.title; $('footS').textContent=p.label+(s.te?' ・ '+s.te:'');
+
+    $('pcur').textContent=DISPLAY_NUM[s.n];
+    $('pbarFill').style.width=(VISIBLE_TOTAL?(DISPLAY_NUM[s.n]/VISIBLE_TOTAL*100):0)+'%';
+    Array.from(phasesWrap.children).forEach(b=>b.classList.toggle('on', b.dataset.pid===s.phase));
+    Array.from(navList.querySelectorAll('.nav-item')).forEach(b=>{ const i=+b.dataset.idx; b.classList.toggle('cur',i===cur); b.classList.toggle('done',i<cur); });
+    $('prevBtn').disabled=prevIndex(cur)<0; $('nextBtn').disabled=nextIndex(cur)>=TOTAL;
+    drawerScroll.scrollTop=0; replay();
+  }
+
+  /* n33「非破壊スキップ」：次へ／前へは isSkippedIdx を飛び越して隣の有効な手へ進む。
+     n32→n34（またはn34→n32）は「1手ぶんの通常移動」として扱い、トゥイーン付きでなめらかに
+     つなぐ（indexの差が2でも大ジャンプ扱いにしない＝sequential引数で明示）。 */
+  function nextIndex(i){ let j=i+1; while(j<TOTAL && isSkippedIdx(j)) j++; return j; }
+  function prevIndex(i){ let j=i-1; while(j>=0 && isSkippedIdx(j)) j--; return j; }
+
+  function goTo(i, sequential){
+    i=Math.max(0,Math.min(TOTAL-1,i));
+    if(isSkippedIdx(i)){
+      // 保険：万一スキップ対象へ直接ジャンプが指示されても、隣の有効な手へ寄せる
+      const fwd = nextIndex(i-1), bwd = prevIndex(i+1);
+      i = (fwd < TOTAL) ? fwd : bwd;
+      if(i < 0) return;
+    }
+    const jump = sequential ? false : (Math.abs(i-cur) > 1);   // メニューからの大ジャンプはトゥイーン無しで瞬時反映
+    cur=i; render(jump);
+  }
+  function next(){ const j=nextIndex(cur); if(j<TOTAL) goTo(j, true); }
+  function prev(){ const j=prevIndex(cur); if(j>=0) goTo(j, true); }
+
+  function setOpen(o){
+    open=o; grid.classList.toggle('closed', !o);
+    const t=$('toggleBtn'); t.classList.toggle('on', o); t.setAttribute('aria-checked', String(o));
+    $('swState').textContent = o ? 'ON' : 'OFF';
+    animateFit(480);   // 開閉でステージ幅が変わるのでフィットし直す
+  }
+  $('toggleBtn').addEventListener('click', () => setOpen(!open));
+
+  const menu=$('menu'), scrim=$('scrim');
+  function openMenu(o){ menu.classList.toggle('show',o); scrim.classList.toggle('show',o); }
+  $('hamBtn').addEventListener('click', () => openMenu(true));
+  scrim.addEventListener('click', () => openMenu(false));
+
+  document.addEventListener('keydown', e=>{
+    if(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if(e.key==='ArrowRight'){ e.preventDefault(); next(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); prev(); }
+    else if(e.key==='Escape'){ openMenu(false); }
+  });
+  $('prevBtn').addEventListener('click', prev);
+  $('nextBtn').addEventListener('click', next);
+
+  render(true);
+  fitFrame();
+  window.addEventListener('load', fitFrame);
+})();
+</script>
+</body>
+</html>

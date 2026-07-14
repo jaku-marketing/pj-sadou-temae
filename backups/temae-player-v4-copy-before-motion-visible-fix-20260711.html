@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>茶道お点前 v4 — 文言と先生コメント</title>
+  <style>
+    :root{
+      --orange:#c98254; --orange-deep:#ae6843; --orange-pale:#f8eee7;
+      --sage:#858b70; --sage-deep:#697055; --gold:#bf8a54;
+      --bg:#faf8f4; --surface:#fffdf9; --surface-2:#f8f4ee;
+      --ink:#463931; --ink-soft:#8f8379; --line:#e7ddd3;
+      --font:"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+      --font-head:"Hiragino Mincho ProN","Noto Serif JP",serif;
+      --radius:22px; --radius-s:12px; --shadow:0 12px 28px rgba(79,56,40,.09);
+      --ease:cubic-bezier(.4,.14,.2,1); --ease-out:cubic-bezier(.16,.84,.34,1);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:var(--font);color:var(--ink);background:var(--bg);overflow:hidden;-webkit-font-smoothing:antialiased}
+    button{font:inherit;color:inherit;cursor:pointer}
+    svg{display:block}
+    .app{height:100dvh;display:grid;grid-template-columns:122px minmax(0,1fr);grid-template-rows:92px 108px 1fr 96px}
+
+    .topbar{grid-column:1 / -1;grid-row:1;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:16px 40px;background:rgba(255,253,249,.97);border-bottom:1px solid var(--line);z-index:20}
+    .brand{display:flex;align-items:center;gap:11px;min-width:0;flex:1}
+    .logo{display:grid;place-items:center;width:47px;height:47px;border:1.5px solid var(--gold);border-radius:50%;color:var(--gold);font:700 24px var(--font-head);background:var(--surface)}
+    .context .a{display:block;font:700 18px var(--font-head);letter-spacing:.14em;color:var(--ink)}
+    .context .b{display:block;font-size:10px;letter-spacing:.26em;color:#9b8c80;margin-top:5px}
+    .page-title{text-align:center}.page-title b{display:block;font:700 21px var(--font-head);letter-spacing:.12em}.page-title span{display:block;font-size:11px;letter-spacing:.16em;color:var(--ink-soft);margin-top:5px}
+    .header-actions{justify-self:end;display:flex;align-items:center;gap:14px}.guide{padding:12px 19px;border:1px solid var(--line);border-radius:99px;background:var(--surface);color:var(--sage-deep);font-size:12px;letter-spacing:.08em}.guide::before{content:"▱";font-size:17px;margin-right:8px;vertical-align:-1px}.version{border:0;border-radius:99px;padding:13px 22px;background:linear-gradient(135deg,#9aa083,var(--sage-deep));color:#fff;font-size:12px;font-weight:700;letter-spacing:.07em}
+    .side-nav{grid-row:2 / 5;grid-column:1;display:flex;flex-direction:column;align-items:center;gap:22px;padding:32px 10px 18px;background:rgba(255,253,249,.98);border-right:1px solid var(--line);z-index:30}.side-nav .crest{display:none}.side-nav .nav-item{display:flex;flex-direction:column;align-items:center;gap:8px;width:86px;padding:15px 4px;border-radius:38px;color:var(--ink-soft);font-size:10px;letter-spacing:.08em}.side-nav .nav-item b{font-size:24px;font-weight:400;line-height:1}.side-nav .nav-item.on{color:var(--sage-deep);background:#f2eee6;border:1px solid #ece3d8}.side-nav .nav-item.settings{margin-top:auto}
+
+    .progress{grid-column:2;display:flex;align-items:center;gap:26px;padding:0 58px;background:var(--surface);border-bottom:1px solid var(--line);overflow:hidden;z-index:15}
+    .chapter-track{position:relative;align-self:stretch;flex:1;max-width:810px}.chapter-step{position:absolute;top:26px;display:flex;align-items:center;gap:15px;color:var(--ink);font:500 18px var(--font-head);letter-spacing:.06em}.chapter-step:nth-child(1){left:0}.chapter-step:nth-child(2){left:39%}.chapter-step:nth-child(3){left:78%}.chapter-step .chapter-number{display:grid;place-items:center;width:50px;height:50px;flex:none;border:1px solid #ded3c8;border-radius:50%;background:var(--surface);font:400 19px var(--font-head)}.chapter-step .chapter-name{white-space:nowrap}.chapter-step.on{color:var(--orange-deep)}.chapter-step.on .chapter-number{color:#fff;border-color:var(--orange);background:linear-gradient(135deg,#db9b75,var(--orange-deep));box-shadow:0 7px 15px rgba(176,104,67,.2)}.chapter-step.done .chapter-number{border-color:#d6b290;color:var(--gold)}.phase-meter{position:absolute;left:0;right:0;bottom:18px;height:24px}.phase-meter::before{content:"";position:absolute;left:0;right:0;top:11px;height:1px;background:#dccfc2}.phase-meter i{position:absolute;left:0;top:11px;width:var(--meter,10%);height:1px;background:var(--orange);transition:width .35s var(--ease)}.phase-flower{position:absolute;z-index:1;left:var(--meter,10%);top:0;transform:translateX(-50%);width:24px;height:24px;display:grid;place-items:center;background:var(--surface);color:var(--orange);font-size:25px;line-height:1;transition:left .35s var(--ease)}
+    .count{white-space:nowrap;font-size:12px;letter-spacing:.1em;color:var(--ink-soft);font-weight:700}.count b{color:var(--ink);font:700 16px var(--font-head)}
+
+    .body{grid-column:2;position:relative;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 438px;background:linear-gradient(115deg,rgba(255,255,255,.5),rgba(250,247,241,.8))}
+    .stage{position:relative;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;padding:22px 18px 22px 44px;overflow:hidden}
+    .imgframe{position:relative;width:100%;height:100%;max-height:calc((100vw - 560px) * .57);aspect-ratio:1600/912;border-radius:20px;overflow:hidden;border:3px solid #fff;box-shadow:0 0 0 1px #eadfd4,var(--shadow);background:#efe4d4}
+    .stage-image{width:100%;height:100%;object-fit:cover;display:block}.motion-frame{position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;transition:opacity .22s var(--ease);background:transparent}.imgframe.motion-ready .motion-frame{opacity:1}
+    .empty-mark{display:none}
+    .empty-mark .flower{width:50px;height:50px;margin:0 auto 10px;position:relative;opacity:.55}
+    .empty-mark .flower i{position:absolute;width:20px;height:27px;border-radius:60% 60% 50% 50%;background:var(--rose-soft);left:15px;top:0;transform-origin:50% 25px}
+    .empty-mark .flower i:nth-child(2){transform:rotate(72deg)}.empty-mark .flower i:nth-child(3){transform:rotate(144deg)}.empty-mark .flower i:nth-child(4){transform:rotate(216deg)}.empty-mark .flower i:nth-child(5){transform:rotate(288deg)}
+    .empty-mark strong{display:block;font:700 17px var(--font-head);color:var(--rose-deep);letter-spacing:.08em}.empty-mark span{display:block;font-size:11px;margin-top:5px}
+
+    .teacher-layer{display:none}
+    .teacher-art{position:relative;z-index:2;flex:0 0 126px;height:188px;margin-left:-7px;transform-origin:bottom right;animation:teacherEnter .62s var(--ease-out) both}
+    .teacher-placeholder{position:absolute;inset:0;border:2px dashed rgba(156,93,105,.42);border-radius:64px 64px 18px 18px;background:linear-gradient(180deg,rgba(255,253,252,.97),rgba(239,225,228,.92));display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--rose-deep);box-shadow:0 12px 26px rgba(80,45,55,.14)}
+    .teacher-placeholder::before{content:"";width:58px;height:58px;border-radius:50%;background:#fff;border:1px solid rgba(156,93,105,.25);margin-bottom:9px;box-shadow:0 24px 0 9px rgba(201,138,150,.28)}
+    .teacher-placeholder b{font-size:11px;letter-spacing:.06em}.teacher-placeholder small{font-size:9px;margin-top:3px;color:var(--ink-soft)}
+    .dialogue{position:relative;z-index:3;width:min(560px,calc(100% - 106px));min-height:116px;margin-bottom:13px;padding:24px 28px 21px;border:3px solid var(--rose-deep);border-radius:14px;background:rgba(255,253,252,.97);box-shadow:0 0 0 5px rgba(255,253,252,.92),0 15px 34px rgba(80,45,55,.2);pointer-events:auto;cursor:pointer;animation:dialogueEnter .42s .16s var(--ease-out) both}
+    .dialogue::after{content:"";position:absolute;right:-16px;bottom:27px;width:25px;height:25px;background:var(--surface);border-top:3px solid var(--rose-deep);border-right:3px solid var(--rose-deep);transform:rotate(45deg)}
+    .speaker{position:absolute;left:18px;top:-17px;padding:5px 17px;border-radius:99px;background:linear-gradient(140deg,var(--rose),var(--rose-deep));color:#fff;font:700 12px var(--font-head);letter-spacing:.1em;box-shadow:0 4px 10px rgba(80,45,55,.15)}
+    .teacher-text{font-family:var(--font-head);font-size:16px;line-height:1.9;letter-spacing:.03em;min-height:3.8em;margin:0}
+    .advance{position:absolute;right:15px;bottom:9px;color:var(--rose-deep);font-size:11px;animation:blink 1s steps(2,end) infinite}
+    @keyframes teacherEnter{from{opacity:0;transform:translate(70px,48px) rotate(4deg)}to{opacity:1;transform:none}}
+    @keyframes dialogueEnter{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+    @keyframes blink{50%{opacity:.25}}
+
+    .drawer{min-width:0;min-height:0;margin:18px 44px 18px 18px;border:1px solid #e6d8ca;border-radius:20px;background:rgba(255,253,249,.98);box-shadow:0 8px 24px rgba(86,63,46,.05);overflow:hidden}
+    .scroll{height:100%;overflow-y:auto;padding:26px 28px 28px;scrollbar-width:thin}.scroll::-webkit-scrollbar{width:7px}.scroll::-webkit-scrollbar-thumb{background:#ead9ca;border-radius:8px}
+    .kicker{display:inline-block;font-size:11px;letter-spacing:.12em;font-weight:800;color:#fff;background:linear-gradient(135deg,#dc9a75,var(--orange-deep));border-radius:99px;padding:6px 14px}
+    .te{font-size:11px;letter-spacing:.12em;color:#9b8c81;font-weight:700;margin:16px 0 5px}
+    .title{font:700 27px/1.45 var(--font-head);letter-spacing:.03em;margin:0 0 18px}
+    .label{display:none}
+    .body-copy{font-size:14px;line-height:2;letter-spacing:.025em;margin:0 0 16px}.body-copy strong{font-weight:700}
+    .pictos{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 17px}.picto{display:inline-flex;align-items:center;gap:6px;background:transparent;border:0;border-bottom:1px solid #e8dccf;border-radius:0;padding:7px 2px;color:var(--ink);font-size:12px}.picto svg{width:18px;height:18px;stroke:var(--gold);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.picto b{font:600 14px var(--font-head)}.picto span{color:var(--ink-soft)}
+    .info-stack{display:grid;gap:14px;border-top:0;padding-top:0}.detail{font-size:12px;line-height:1.85;color:#7f746a;background:var(--surface-2);border-radius:11px;padding:13px 15px}.detail b{display:block;color:var(--orange-deep);font-size:11px;letter-spacing:.1em;margin-bottom:5px}.detail.women{background:#fcf2ed;border:1px solid #efd8ca}.detail.women b::before{content:"✿";margin-right:6px;color:var(--orange)}.detail.tidbit{border:1px solid #eadfd1;background:#fcf8f3}.detail.tidbit b::before{content:"⌁";margin-right:7px;color:var(--gold);font-size:17px;vertical-align:-2px}.tidbit-title{color:var(--ink);font-family:var(--font-head);font-size:15px}.volume{display:none}
+
+    .footer{grid-column:2;display:flex;align-items:center;gap:12px;padding:14px 58px;background:var(--surface);border-top:1px solid var(--line);z-index:20}
+    .navbtn{display:inline-flex;align-items:center;justify-content:center;min-width:152px;padding:16px 23px;border:1px solid #e4d8cd;border-radius:99px;background:var(--surface);font:500 14px var(--font-head);letter-spacing:.08em}.navbtn.next{background:linear-gradient(135deg,#9aa083,var(--sage-deep));color:#fff;border-color:transparent}.navbtn:disabled{opacity:.3;cursor:not-allowed}
+    .foot-mid{flex:1;min-width:0;text-align:center}.foot-mid .t{font:700 16px var(--font-head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.foot-mid .s{font-size:10px;color:var(--ink-soft);margin-top:3px}.footer-meter{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:9px}.footer-meter i{width:7px;height:7px;border-radius:50%;background:#d8c9bc}.footer-meter i.on{width:18px;height:18px;background:var(--orange);box-shadow:0 0 0 3px #f7ebe3}.footer-meter .petal{width:auto;height:auto;background:none!important;color:var(--orange);font-size:18px}
+    .error{margin:24px;padding:18px;border:1px solid #a43f37;background:#fff2f0;color:#842e28;border-radius:12px}
+
+    @media(max-width:820px){
+      body{overflow:auto}.app{height:auto;min-height:100dvh;display:grid;grid-template-columns:1fr;grid-template-rows:auto 86px 1fr auto}.side-nav{display:none}.topbar,.progress,.body,.footer{grid-column:1}.topbar{padding:12px 17px}.page-title{display:none}.header-actions .guide{display:none}.body{grid-template-columns:1fr;grid-template-rows:auto auto}.stage{padding:14px 14px 7px;min-height:380px}.imgframe{height:auto;max-height:none;aspect-ratio:16/10}.drawer{margin:10px 14px 14px;border:1px solid var(--line)}.scroll{overflow:visible}.context .b{display:none}
+    }
+    @media(max-width:520px){
+      .topbar{padding:10px 12px}.logo{width:35px;height:35px;font-size:15px}.context .a{font-size:14px}.version{padding:9px 11px}.progress{padding:7px 15px}.chapter-step{top:18px;gap:7px;font-size:13px}.chapter-step .chapter-number{width:33px;height:33px;font-size:15px}.chapter-step:nth-child(2){left:38%}.chapter-step:nth-child(3){left:75%}.phase-meter{bottom:9px}.count{display:none}.stage{min-height:330px;padding:10px}.imgframe{aspect-ratio:1/1}.scroll{padding:20px}.title{font-size:23px}.body-copy{font-size:14px;line-height:1.95}.footer{position:sticky;bottom:0;padding:9px 11px}.navbtn{min-width:92px;padding:12px}.footer-meter{gap:8px}.footer-meter i{width:5px;height:5px}
+    }
+    @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="side-nav" aria-label="主要ナビゲーション"><div class="crest" aria-hidden="true">❀</div><div class="nav-item"><b>⌂</b><span>ホーム</span></div><div class="nav-item on"><b>⌑</b><span>学ぶ</span></div><div class="nav-item"><b>◇</b><span>コレクション</span></div><div class="nav-item"><b>▤</b><span>用語集</span></div><div class="nav-item settings"><b>⚙</b><span>設定</span></div></nav>
+    <header class="topbar"><div class="brand"><div class="logo">茶</div><div class="context"><span class="a">現代茶道ミュージアム</span><span class="b">GENDAI SADO MUSEUM</span></div></div><div class="page-title"><b>茶の湯・表千家・女点前</b><span>風炉（夏）／薄茶／運び点前</span></div><div class="header-actions"><span class="guide">学習ガイド</span><span class="version">マイページ</span></div></header>
+    <div class="progress" aria-label="お点前の進行"><div class="chapter-track"><div class="chapter-step" data-chapter="清め"><span class="chapter-number">1</span><span class="chapter-name">清め</span></div><div class="chapter-step" data-chapter="点て"><span class="chapter-number">2</span><span class="chapter-name">点て</span></div><div class="chapter-step" data-chapter="仕舞い"><span class="chapter-number">3</span><span class="chapter-name">仕舞い</span></div><div class="phase-meter" id="phaseMeter"><i></i><span class="phase-flower" aria-hidden="true">✿</span></div></div><div class="count">◆　<b id="stepCounter">第44手</b> / 全54手　◆</div></div>
+    <main class="body">
+      <section class="stage" aria-label="動作を配置する予定の舞台">
+        <div class="imgframe">
+          <img class="stage-image" id="stageImage" src="./img/3.png" alt="お点前の様子">
+          <iframe class="motion-frame" id="motionFrame" src="./temae-player-v4-motion-stage.html?embed=1" title="お点前の動作アニメーション"></iframe>
+          <div class="empty-mark"><div class="flower" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><strong>所作アニメーション準備中</strong><span>ここでは、右側の文言と情報量を確認します</span></div>
+          <div class="teacher-layer" id="teacherLayer">
+            <div class="dialogue" id="dialogue" role="button" tabindex="0" aria-label="先生のコメントを最後まで表示"><span class="speaker">先生</span><p class="teacher-text" id="teacherText"></p><span class="advance">▼</span></div>
+            <div class="teacher-art" aria-label="先生イラストの配置予定領域"><div class="teacher-placeholder"><b>先生イラスト</b><small>差し替え予定</small></div></div>
+          </div>
+        </div>
+      </section>
+      <aside class="drawer" aria-label="手順の説明"><div class="scroll" id="copyPanel"></div></aside>
+    </main>
+    <footer class="footer"><button class="navbtn" id="prevBtn" type="button">‹　前の手へ</button><div class="foot-mid"><div class="t" id="footTitle"></div><div class="footer-meter" id="footerMeter" aria-hidden="true"></div></div><button class="navbtn next" id="nextBtn" type="button">次の手へ　›</button></footer>
+  </div>
+  <script>
+    (()=>{
+      'use strict';
+      const parseWording=markdown=>[...markdown.matchAll(/^## (\d+)\. (.+)\n([\s\S]*?)(?=^## |\n---)/gm)].map(([,step,,block])=>{
+        const field=name=>block.match(new RegExp(`^- ${name}:\\s*(.+)$`,'m'))?.[1]?.trim()||'';
+        return {id:`step-${step}`,step:Number(step),phase:`${field('章')} / ${field('小ラベル')}`,title:field('タイトル'),body:field('概要文'),women:field('女点前のポイント'),tidbit:field('豆知識'),teacher:'',pictograms:[]};
+      });
+      const imageForStep=step=>{
+        if(step<=32)return step+2;
+        if(step===33||step===34)return 36;
+        if(step===35||step===36)return 37;
+        return Math.min(step,53);
+      };
+      const boot=samples=>{
+      const required=['id','step','phase','title','body','teacher','pictograms'];
+      const errors=[];if(samples.length!==54)errors.push('文言台帳は54手必要です。');
+      const ids=new Set();samples.forEach((s,i)=>{required.forEach(k=>{if(!(k in s))errors.push(`${i+1}件目に${k}がありません。`)});if(ids.has(s.id))errors.push(`${s.id}が重複しています。`);ids.add(s.id);if(!Array.isArray(s.pictograms)||s.pictograms.length>3)errors.push(`${s.id}のピクトは最大3個です。`) });
+      if(errors.length){document.querySelector('.body').innerHTML=`<div class="error">${errors.join('<br>')}</div>`;return}
+      const panel=document.getElementById('copyPanel'),stageImage=document.getElementById('stageImage'),motionFrame=document.getElementById('motionFrame'),phaseMeter=document.getElementById('phaseMeter'),footerMeter=document.getElementById('footerMeter'),teacherText=document.getElementById('teacherText'),teacherLayer=document.getElementById('teacherLayer'),chapterSteps=[...document.querySelectorAll('[data-chapter]')];
+      let index=Math.min(samples.length-1,Math.max(0,(Number(new URLSearchParams(location.search).get('sample'))||1)-1)),timer=null,fullText='',motionStep=null;
+      const chars=v=>Array.from(String(v||'').replace(/\s/g,'')).length;
+      const icon=type=>{const p={手:'<path d="M8 18v-7m4 7V7m4 11V8m4 11v-7M8 17c-3-2-4 0-2 3l4 6c1 2 3 3 6 3 5 0 7-4 7-9"/>',移動:'<path d="M4 12h14m-5-5 5 5-5 5"/>',位置:'<circle cx="12" cy="9" r="4"/><path d="M12 22s7-7 7-13A7 7 0 1 0 5 9c0 6 7 13 7 13Z"/>',確認:'<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2"/>',発話:'<path d="M3 5h18v12H10l-5 4v-4H3Z"/>',道具:'<path d="M7 4h10l-2 16H9L7 4Zm1 5h8"/>'};return `<svg viewBox="0 0 24 24" aria-hidden="true">${p[type]||p.道具}</svg>`};
+      const detail=(label,text,cls='')=>text?`<div class="detail ${cls}"><b>${label}</b>${text}</div>`:'';
+      const typeTeacher=()=>{clearInterval(timer);teacherText.textContent='';fullText=samples[index].teacher;let i=0;const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;if(reduced){teacherText.textContent=fullText;return}timer=setInterval(()=>{teacherText.textContent+=Array.from(fullText)[i++]||'';if(i>=Array.from(fullText).length)clearInterval(timer)},30)};
+      const finishTeacher=()=>{clearInterval(timer);teacherText.textContent=fullText};
+      const render=()=>{const s=samples[index],chapter=s.phase.split('/')[0].trim(),chapterOrder=['清め','点て','仕舞い'],chapterIndex=chapterOrder.indexOf(chapter),chapterLabel=['① 清め','② 点て','③ 仕舞い'][chapterIndex]||chapter,meter=Math.max(.1,Math.min(.98,(s.step-1)/53));
+        panel.innerHTML=`<span class="kicker">${chapterLabel}</span><div class="te">${s.phase.split('/')[1]?.trim()||''}</div><h1 class="title">${s.title}</h1><p class="body-copy">${s.body}</p>${s.pictograms.length?`<div class="pictos">${s.pictograms.map(p=>`<span class="picto">${icon(p.icon)}<b>${p.target}</b><span>${p.action}</span></span>`).join('')}</div>`:''}<div class="info-stack">${detail('女点前のポイント',s.women,'women')}${s.tidbit?detail('豆知識',s.tidbit,'tidbit'):''}</div>`;
+        stageImage.src=`./img/${imageForStep(s.step)}.png`;stageImage.alt=s.title;const player=motionFrame.contentWindow?.SADO_V4_MOTION;if(player){player.goToStep(s.step,motionStep!==null&&Math.abs(motionStep-s.step)===1);motionStep=s.step}phaseMeter.style.setProperty('--meter',`${meter*100}%`);footerMeter.innerHTML=Array.from({length:13},(_,i)=>i===Math.round(meter*12)?'<i class="on"></i>':(i===12?'<i class="petal">✿</i>':'<i></i>')).join('');chapterSteps.forEach((el,i)=>{el.classList.toggle('on',i===chapterIndex);el.classList.toggle('done',i<chapterIndex)});document.getElementById('stepCounter').textContent=`第${s.step}手`;document.getElementById('footTitle').textContent=s.title;document.getElementById('prevBtn').disabled=index===0;document.getElementById('nextBtn').disabled=index===samples.length-1;history.replaceState(null,'',`${location.pathname}?sample=${index+1}`);
+        teacherLayer.style.animation='none';void teacherLayer.offsetWidth;teacherLayer.style.animation='';typeTeacher();
+      };
+      const go=i=>{index=Math.min(samples.length-1,Math.max(0,i));render()};
+      document.getElementById('prevBtn').addEventListener('click',()=>go(index-1));document.getElementById('nextBtn').addEventListener('click',()=>go(index+1));document.getElementById('dialogue').addEventListener('click',finishTeacher);document.getElementById('dialogue').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')finishTeacher()});document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')go(index-1);if(e.key==='ArrowRight')go(index+1)});motionFrame.addEventListener('load',()=>{motionFrame.parentElement.classList.add('motion-ready');motionStep=null;render()});render();
+      };
+      fetch('./V4_WORDING_v4.1_draft.md').then(response=>{if(!response.ok)throw new Error('文言台帳を読み込めません。');return response.text()}).then(markdown=>boot(parseWording(markdown))).catch(error=>{document.querySelector('.body').innerHTML=`<div class="error">${error.message}</div>`});
+    })();
+  </script>
+</body>
+</html>
